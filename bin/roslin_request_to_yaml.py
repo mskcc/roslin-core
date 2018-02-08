@@ -9,14 +9,16 @@ import copy
 import csv
 import glob
 import uuid
-import cmo
+import json
 from collections import defaultdict
 
 mapping_headers = ["library_suffix", "sample_id", "run_id", "fastq_directory", "runtype"]
 pairing_headers = ['normal_id', 'tumor_id']
 grouping_headers = ['sample_id', 'group_id']
 new_yaml_object = []
-
+ROSLIN_PATH = os.environ['ROSLIN_PIPELINE_BIN_PATH']
+ROSLIN_RESOURCES = json.load(open(ROSLIN_PATH + os.sep + "cwl" + os.sep + "roslin_resources.json", 'r'))
+REQUEST_FILES = ROSLIN_RESOURCES["request_files"]
 
 def parse_mapping_file(mfile):
     mapping_dict = dict()
@@ -29,10 +31,10 @@ def parse_mapping_file(mfile):
         row['sample_id'] = row['sample_id'].replace("-", "_")
         new_row = copy.deepcopy(row)
         rg_id = row['sample_id'].replace("-","_") + new_row['library_suffix'].replace("-","_") + "-" + new_row['run_id'].replace("-","_")
-        new_row['run_id']=new_row['run_id'].replace("-","_")
+        new_row['run_id'] = new_row['run_id'].replace("-","_")
         #hyphens suck
         fastqs = sort_fastqs_into_dict(glob.glob(os.path.join(new_row['fastq_directory'], "*R[12]*.fastq.gz")))
-        new_row['rg_id']= []
+        new_row['rg_id'] = []
         for fastq in fastqs['R1']:
             new_row['rg_id'].append(rg_id)
         if row['sample_id'] in mapping_dict:
@@ -40,10 +42,10 @@ def parse_mapping_file(mfile):
             #FIXME do this merge better
             mapping_dict[row['sample_id']]['fastqs']['R1']= mapping_dict[row['sample_id']]['fastqs']['R1'] + fastqs['R1']
             mapping_dict[row['sample_id']]['fastqs']['R2']= mapping_dict[row['sample_id']]['fastqs']['R2'] + fastqs['R2']
-            #append this so when we have a big list of bullshit, we can hoepfully sort out 
+            #append this so when we have a big list of bullshit, we can hoepfully sort out
             #the types of bullshit that are suited for each other
             for fastq in fastqs['R1']:
-                mapping_dict[row['sample_id']]['rg_id'].append(row['sample_id'] + new_row['library_suffix'] + "-"+new_row['run_id'])
+                mapping_dict[row['sample_id']]['rg_id'].append(row['sample_id'] + new_row['library_suffix'] + "-" + new_row['run_id'])
         else:
             new_row['fastqs'] = fastqs
             mapping_dict[row['sample_id']] = new_row
@@ -83,7 +85,7 @@ def parse_request_file(rfile):
         line = stream.readline()
         if not line:
             break
-        if line.find("Assay:") ==0:
+        if line.find("Assay:") == 0:
             (key, value) = line.strip().split(": ")
             assay = value
         if line.find("ProjectID") > -1:
@@ -91,9 +93,20 @@ def parse_request_file(rfile):
             project = value
     return (assay, project)
 
+def get_curated_bams():
+    json_curated_bams = REQUEST_FILES['curated_bams']
+
+    array = []
+
+    for bam in json_curated_bams:
+        array.append({'class': 'File', 'path': str(bam)})
+
+    return array
 
 def get_baits_and_targets(assay):
     # probably need similar rules for whatever "Exome" string is in rquest
+    targets = ROSLIN_RESOURCES['targets']
+
     if assay.find("IMPACT410") > -1:
         assay = "IMPACT410_b37"
     if assay.find("IMPACT468") > -1:
@@ -101,13 +114,11 @@ def get_baits_and_targets(assay):
     if assay.find("IMPACT341") > -1:
         assay = "IMPACT341_b37"
 
-
-    if assay in cmo.util.targets:
-        return {"bait_intervals": {"class": "File", "path": str(cmo.util.targets[assay]['baits_list'])},
-                "target_intervals": {"class": "File", "path": str(cmo.util.targets[assay]['targets_list'])},
-                "fp_intervals": {"class": "File", "path": str(cmo.util.targets[assay]['FP_intervals'])},
-                "fp_genotypes": {"class": "File", "path": str(cmo.util.targets[assay]['FP_genotypes'])}}
-
+    if assay in targets:
+        return {"bait_intervals": {"class": "File", "path": str(targets[assay]['baits_list'])},
+                "target_intervals": {"class": "File", "path": str(targets[assay]['targets_list'])},
+                "fp_intervals": {"class": "File", "path": str(targets[assay]['FP_intervals'])},
+                "fp_genotypes": {"class": "File", "path": str(targets[assay]['FP_genotypes'])}}
     else:
         print >>sys.stderr, "Assay field in Request file not found in cmo_resources.json targets: %s" % assay
         sys.exit(1)
@@ -157,6 +168,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     (assay, project_id) = parse_request_file(args.request)
     intervals = get_baits_and_targets(assay)
+    curated_bams = get_curated_bams()
     mapping_dict = parse_mapping_file(args.mapping)
     pairing_dict = parse_pairing_file(args.pairing)
     grouping_dict = parse_grouping_file(args.grouping)
@@ -194,44 +206,20 @@ if __name__ == "__main__":
         'pairing_file': {'class': 'File', 'path': os.path.realpath(args.pairing)},
         'grouping_file': {'class': 'File', 'path': os.path.realpath(args.grouping)},
         'request_file': {'class': 'File', 'path': os.path.realpath(args.request)},
-        'hapmap': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/hapmap_3.3.b37.vcf'},
-        'dbsnp': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/dbsnp_138.b37.excluding_sites_after_129.vcf'},
-        'indels_1000g': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/Mills_and_1000G_gold_standard.indels.b37.vcf'},
-        'snps_1000g': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/1000G_phase1.snps.high_confidence.b37.vcf'},
-        'cosmic': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/CosmicCodingMuts_v67_b37_20131024__NDS.vcf'},
-        'refseq': {'class': 'File', 'path': "/ifs/work/prism/chunj/test-data/ref/refGene_b37.sorted.txt"},
-        'exac_filter': {'class': 'File', 'path': '/ifs/work/chunj/prism-proto/ifs/depot/resources/vep/v86/ExAC_nonTCGA.r0.3.1.sites.vep.vcf.gz'},
-        'vep_data': '/ifs/work/chunj/prism-proto/ifs/depot/resources/vep/v86',
-        'curated_bams': [
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M12-1892-N_bc10_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44042-1-N_bc24_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44503-N_bc39_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-43532-1-N_bc16_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M12-2615-N_bc12_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44056-1-N_bc23_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44315-1-N_bc30_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M11-3639-N_bc03_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44538-N_bc36_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-43646-1-N_bc29_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-40685-N_bc34_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M12-0399-N_bc08_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-43697-1-N_bc33_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M14-8322-2-N_bc14_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-41382-1-N_bc17_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M14-7594-1-N_bc21_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M11-1637-N_bc11_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M13-1083-N_bc06_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M11-1089-N_bc04_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/M12-0994-N_bc05_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S12-18799-N_bc38_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-43894-1-N_bc32_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'},
-            {'class': 'File', 'path': '/ifs/depot/resources/dmp/data/mskdata/std-normals-bam/VERSIONS/cv5/S14-44576-1-N_bc27_IMPACTv5-VAL-FFPECTRL2014_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam'}
-        ],
+        'hapmap': {'class': 'File', 'path': str(REQUEST_FILES['hapmap'])}, 
+        'dbsnp': {'class': 'File', 'path': str(REQUEST_FILES['dbsnp'])},
+        'indels_1000g': {'class': 'File', 'path': str(REQUEST_FILES['indels_1000g'])}, 
+        'snps_1000g': {'class': 'File', 'path': str(REQUEST_FILES['snps_1000g'])},
+        'cosmic': {'class': 'File', 'path': str(REQUEST_FILES['cosmic'])},
+        'refseq': {'class': 'File', 'path': str(REQUEST_FILES['refseq'])},
+        'exac_filter': {'class': 'File', 'path': str(REQUEST_FILES['exac_filter'])},
+        'vep_data': str(REQUEST_FILES['vep_data']),
+        'curated_bams': curated_bams,
         'ffpe_normal_bams': [
-            {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ffpe/Proj_06049_Pool_indelRealigned_recal_s_UD_ffpepool1_N.bam'}
+            {'class': 'File', 'path': str(REQUEST_FILES['ffpe_normal_bams'])} 
         ],
-        'hotspot_list': {'class': 'File', 'path': '/ifs/work/prism/chunj/test-data/ref/hotspot-list-union-v1-v2.txt'},
-        'ref_fasta': "/ifs/work/chunj/prism-proto/ifs/depot/assemblies/H.sapiens/b37/b37.fasta"
+        'hotspot_list': {'class': 'File', 'path': str(REQUEST_FILES['hotspot_list'])},
+        'ref_fasta':  str(REQUEST_FILES['ref_fasta'])
     }
     files.update(intervals)
 
@@ -256,10 +244,6 @@ if __name__ == "__main__":
         for index_to_delete in fail:
             print >>sys.stderr, "PAIR HAS NA!!! -- Removing %s and %s as a pair in inputs.yaml" % (pairing_dict[index_to_delete-1][0], pairing_dict[index_to_delete][1])
             del pairing_dict[index_to_delete]
-
-
-
-
 
     for sample_id, sample in mapping_dict.items():
         new_sample_object = dict()
