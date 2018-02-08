@@ -50,7 +50,6 @@ def parse_mapping_file(mfile):
             new_row['fastqs'] = fastqs
             mapping_dict[row['sample_id']] = new_row
 
-
     return mapping_dict
 
 
@@ -93,15 +92,16 @@ def parse_request_file(rfile):
             project = value
     return (assay, project)
 
+
 def get_curated_bams():
     json_curated_bams = REQUEST_FILES['curated_bams']
-
     array = []
 
     for bam in json_curated_bams:
         array.append({'class': 'File', 'path': str(bam)})
 
     return array
+
 
 def get_baits_and_targets(assay):
     # probably need similar rules for whatever "Exome" string is in rquest
