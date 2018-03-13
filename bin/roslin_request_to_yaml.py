@@ -85,18 +85,20 @@ def parse_request_file(rfile):
         if not line:
             break
         if line.find("Assay:") == 0:
-            (key, value) = line.strip().split(": ")
-            assay = value
-        if line.find("ProjectID") > -1:
-            (key, value) = line.strip().split(": ")
-            project = value
+            (key, value) = line.strip().split(":")
+            assay = value.strip()
+        if line.find("ProjectID:") > -1:
+            (key, value) = line.strip().split(":")
+            project = value.strip()
     return (assay, project)
 
 
-def get_curated_bams():
-    json_curated_bams = REQUEST_FILES['curated_bams']
+def get_curated_bams(assay):
+    # Default to AgilentExon_51MB_b37_v3 BAMs. Use IMPACT410 BAMs for all IMPACT/HemePACT projects
+    json_curated_bams = REQUEST_FILES['curated_bams']['AgilentExon_51MB_b37_v3']
+    if assay.find("IMPACT") > -1 or assay.find("HemePACT") > -1:
+        json_curated_bams = REQUEST_FILES['curated_bams']['IMPACT410_b37']
     array = []
-
     for bam in json_curated_bams:
         array.append({'class': 'File', 'path': str(bam)})
 
@@ -120,7 +122,7 @@ def get_baits_and_targets(assay):
                 "fp_intervals": {"class": "File", "path": str(targets[assay]['FP_intervals'])},
                 "fp_genotypes": {"class": "File", "path": str(targets[assay]['FP_genotypes'])}}
     else:
-        print >>sys.stderr, "Assay field in Request file not found in cmo_resources.json targets: %s" % assay
+        print >>sys.stderr, "ERROR: Targets for Assay not found in roslin_resources.json: %s" % assay
         sys.exit(1)
 
 
@@ -135,7 +137,7 @@ def sort_fastqs_into_dict(files):
             m = re.search("(?P<sample>[^_]+)_(?P<barcode>\S+)_(?P<flowcell>\S+)_(?P<lane>\S+)_(?P<set>\d\d\d).(?P<read>R[12]).fastq.gz", base)
         if not m or not (m.group('sample') and m.group('read') and m.group('set')):
             # FIXME LOGGING instead of CRITICAL fail?
-            print >>sys.stderr, "Can't find filename parts (Sample/Barcode, R1/2, group) for this fastq: %s" % file
+            print >>sys.stderr, "ERROR: Can't find filename parts (Sample/Barcode, R1/2, group) for this fastq: %s" % file
             sys.exit(1)
         # fastq file large sample and barcode prefix
         readset = "_".join([m.group('sample') + m.group('lane') + m.group('set')])
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     (assay, project_id) = parse_request_file(args.request)
     intervals = get_baits_and_targets(assay)
-    curated_bams = get_curated_bams()
+    curated_bams = get_curated_bams(assay)
     mapping_dict = parse_mapping_file(args.mapping)
     pairing_dict = parse_pairing_file(args.pairing)
     grouping_dict = parse_grouping_file(args.grouping)
@@ -195,7 +197,6 @@ if __name__ == "__main__":
     md_out_bam = list()
     md_metrics = list()
     tmp_dir = list()
-    tmp_dir_constant = "/ifs/work/scratch"
     covariates = ['CycleCovariate', 'ContextCovariate', 'ReadGroupCovariate', 'QualityScoreCovariate']
     rf = ["BadCigar"]
     genome = "GRCh37"
@@ -215,35 +216,30 @@ if __name__ == "__main__":
         'exac_filter': {'class': 'File', 'path': str(REQUEST_FILES['exac_filter'])},
         'vep_data': str(REQUEST_FILES['vep_data']),
         'curated_bams': curated_bams,
-        'ffpe_normal_bams': [
-            {'class': 'File', 'path': str(REQUEST_FILES['ffpe_normal_bams'])} 
-        ],
         'hotspot_list': {'class': 'File', 'path': str(REQUEST_FILES['hotspot_list'])},
         'ref_fasta':  str(REQUEST_FILES['ref_fasta'])
     }
     files.update(intervals)
 
-    ofh = open(args.yaml_output_file, "wb")
     sample_list = list()
-    #rudimentary data checking charris 9-6-2017
-    fail = []
-    for (counter, pair) in enumerate(pairing_dict, 0):
+
+    # do some checks for missing sample IDs
+    fail = 0
+    for pair in pairing_dict:
         if pair[0] not in mapping_dict.keys():
-            print >>sys.stderr, "pair %s in pairing file has id not in mapping file: %s " % (str(pair), pair[0])
-            fail.append(counter)
-        elif pair[1] not in mapping_dict.keys():
-            print >>sys.stderr, "pair %s in pairing file has id not in mapping file: %s " % (str(pair), pair[1])
-            fail.append(counter)
+            print >>sys.stderr, "pair %s in pairing file has id not in mapping file: %s" % (str(pair), pair[0])
+            fail = 1
+        if pair[1] not in mapping_dict.keys():
+            print >>sys.stderr, "pair %s in pairing file has id not in mapping file: %s" % (str(pair), pair[1])
+            fail = 1
     for group in grouping_dict.values():
         for sample in group:
-            if  sample not in mapping_dict.keys():
-                print >>sys.stderr, "grouping file has uses id %s, but this wasn't found in mapping file--REVIEW INPUTS--" % sample
-                sys.exit(1)
+            if sample not in mapping_dict.keys():
+                print >>sys.stderr, "grouping file has uses id %s, but this wasn't found in mapping file" % sample
+                fail = 1
     if fail:
-        fail.reverse()
-        for index_to_delete in fail:
-            print >>sys.stderr, "PAIR HAS NA!!! -- Removing %s and %s as a pair in inputs.yaml" % (pairing_dict[index_to_delete-1][0], pairing_dict[index_to_delete][1])
-            del pairing_dict[index_to_delete]
+        print >>sys.stderr, "ERROR: Pairing/grouping files have sample IDs not found in mapping file. Please review."
+        sys.exit(1)
 
     for sample_id, sample in mapping_dict.items():
         new_sample_object = dict()
@@ -266,7 +262,7 @@ if __name__ == "__main__":
         "db_files": files,
     }
     params = {
-        "abra_scratch": "/scratch/",
+        "abra_scratch": "/scratch/roslin",
         "genome": genome,
         "mutect_dcov": 50000,
         "mutect_rf": rf,
@@ -274,11 +270,12 @@ if __name__ == "__main__":
         "covariates": covariates,
         "emit_original_quals": True,
         "num_threads": 10,
-        "tmp_dir": "/scratch",
+        "tmp_dir": "/scratch/roslin",
         "project_prefix": project_id,
         "opt_dup_pix_dist": "2500",
         "delly_type": delly_type
     }
     out_dict.update({"runparams": params})
+    ofh = open(args.yaml_output_file, "wb")
     ofh.write(yaml.dump(out_dict))
     ofh.close()
