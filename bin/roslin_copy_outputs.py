@@ -11,6 +11,7 @@ import glob
 import shutil
 import tempfile
 import traceback
+import json
 
 os.environ["TMP"] = '/ifs/work/scratch'
 os.environ["TMPDIR"] = '/ifs/work/scratch'
@@ -119,7 +120,7 @@ def wait_until_done(lsf_job_id_list):
         # break out if all DONE
         if results.rstrip() == "DONE":
             return 0
-        elif "EXIT" in results:
+        elif "EXIT" in results:            
             logger.info("Check roslin_copy_outputs_stderr.log", extra={'message_type': "Error"})
             return 1
 
@@ -161,8 +162,11 @@ def submit_to_lsf(cmo_project_id, job_uuid, job_command, work_dir, job_name, num
         "-e", "roslin_copy_outputs_stderr.log",
         job_command
     ]
+    logger.info(" ".join(bsubline), extra={'message_type': "Full Command"})
 
     lsf_job_id = bsub(bsubline)
+
+    logger.info("LSF ID: "+str(lsf_job_id) + " for "+job_name,extra={'message_type': "LSF ID"})
 
     return lsf_proj_name, lsf_job_id
 
@@ -223,104 +227,52 @@ def create_parallel_cp_commands(file_list, dst_dir, num_of_parallels_per_host):
 
     return cmds
 
+def run_portal_command(params,folder_args):
+    script_name = 'roslin_portal.py'   
+    pipeline_script = script_name
+    params_dict = params
+    command_args = []
+    for single_arg_key in params_dict:
+        single_arg = '--'+ single_arg_key
+        single_arg_value = params_dict[single_arg_key]
+        command_args.append(single_arg)
+        command_args.append(single_arg_value)
+        if not os.path.exists(single_arg_value) and single_arg_key in folder_args:
+            error_string = single_arg_value + " does not exist"
+            logger.error(error_string,extra={'message_type': "Error"})
+            sys.exit(1)
+    command = ['python',pipeline_script] + command_args
+    logger.info('---------- Running portal ----------',extra={'message_type': "Portal INFO"})
+    logger.info('Script path: ' + pipeline_script,extra={'message_type': "Portal INFO"})
+    logger.info('Args: '+ ' '.join(command),extra={'message_type': "Portal INFO"})
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    
+def create_portal_files(cmo_project_id,toil_work_dir,user_out_dir):
+    pipeline_path = toil_work_dir.split("outputs")[0]
+    scripts_path = os.path.join(pipeline_path,'bin','scripts')
+    portal_args = {}
+    portal_args['pipeline_bin_path'] = scripts_path
+    portal_args['copy_outputs_directory'] = user_out_dir
+    portal_args['project_name'] = cmo_project_id
+    folder_args=['pipeline_bin_path','copy_outputs_directory']
+    run_portal_command(portal_args,folder_args)
 
 def copy_outputs(cmo_project_id, job_uuid, toil_work_dir, user_out_dir):
     "copy output files in toil work dir to the final destination"
 
-    # parallels : how many cp do we want to parallelize? (per host)
-    # e.g. 5 means 5 cp commands will be parallelized within a single host
-    # fixme: externalize this to config.json or something
-    data = {
-        "bam": {
-            "patterns": [
-                "outputs/*.bam",
-                "outputs/*.bai"
-            ],
-            "parallels": 5
-        },
-        "vcf": {
-            "patterns": [
-                "outputs/*.vcf",
-                "outputs/*.mutect.txt"
-            ],
-            "parallels": 3
-        },
-        "maf": {
-            "patterns": [
-                "outputs/*.maf",
-                "outputs/*.fillout.maf",
-                "outputs/*.ffpe-normal.fillout",
-                "outputs/*.curated.fillout"
-            ],
-            "parallels": 1
-        },
-        "qc": {
-            "patterns": [
-                "outputs/*FP_base_counts.txt",
-                "outputs/*.asmetrics",
-                "outputs/*.hsmetrics",
-                "outputs/*.ismetrics*",
-                "outputs/*.md_metrics",
-                "outputs/*.quality_by_cycle_metrics"
-                "outputs/*.gcbiasmetrics",
-                "outputs/*.stats",
-                "outputs/*.pdf",
-                "outputs/{}_CutAdaptStats.txt".format(cmo_project_id),
-                "outputs/{}_DiscordantHomAlleleFractions.txt".format(cmo_project_id),
-                "outputs/{}_FingerprintSummary.txt".format(cmo_project_id),
-                "outputs/{}_GcBiasMetrics.txt".format(cmo_project_id),
-                "outputs/{}_HsMetrics.txt".format(cmo_project_id),
-                "outputs/{}_InsertSizeMetrics_Histograms.txt".format(cmo_project_id),
-                "outputs/{}_MajorContamination.txt".format(cmo_project_id),
-                "outputs/{}_markDuplicatesMetrics.txt".format(cmo_project_id),
-                "outputs/{}_MinorContamination.txt".format(cmo_project_id),
-                "outputs/{}_post_recal_MeanQualityByCycle.txt".format(cmo_project_id),
-                "outputs/{}_pre_recal_MeanQualityByCycle.txt".format(cmo_project_id),
-                "outputs/{}_ProjectSummary.txt".format(cmo_project_id),
-                "outputs/{}_QC_Report.pdf".format(cmo_project_id),
-                "outputs/{}_SampleSummary.txt".format(cmo_project_id),
-                "outputs/{}_UnexpectedMatches.txt".format(cmo_project_id),
-                "outputs/{}_UnexpectedMismatches.txt".format(cmo_project_id)
-            ],
-            "parallels": 2
-        },
-        "log": {
-            "patterns": [
-                "outputs/log/*",
-                "stdout.log",
-                "stderr.log",
-                "run-profile.json",
-                "run-results.json",
-                "outputs/output-meta.json",
-                "outputs/settings"
-            ],
-            "parallels": 2
-        },
-        "inputs": {
-            "patterns": [
-                "inputs.yaml",
-                "{}_sample_grouping.txt".format(cmo_project_id),
-                "{}_sample_mapping.txt".format(cmo_project_id),
-                "{}_sample_pairing.txt".format(cmo_project_id),
-            ],
-            "parallels": 1
-        },
-        "facets": {
-            "patterns": [
-                "outputs/*_hisens.CNCF.png",
-                "outputs/*_hisens.cncf.txt",
-                "outputs/*_hisens.out",
-                "outputs/*_hisens.Rdata",
-                "outputs/*_hisens.seg",
-                "outputs/*_purity.CNCF.png",
-                "outputs/*_purity.cncf.txt",
-                "outputs/*_purity.out",
-                "outputs/*_purity.Rdata",
-                "outputs/*_purity.seg"
-            ],
-            "parallels": 1
-        }
-    }
+    pipeline_path = toil_work_dir.split("outputs")[0]
+    copy_outputs_resource_name = 'copy_outputs.json'
+    copy_outputs_resource_path = os.path.join(pipeline_path,'bin','scripts',copy_outputs_resource_name)
+    with open(copy_outputs_resource_path,'r') as copy_outputs_json:
+        copy_outputs_data = json.load(copy_outputs_json)['data']
+    for single_folder in copy_outputs_data:
+        pattern_folder = copy_outputs_data[single_folder]['patterns']
+        new_pattern_folder = []
+        for single_pattern in pattern_folder:
+            new_value = single_pattern.replace('{}',cmo_project_id)
+            new_pattern_folder.append(new_value)
+        copy_outputs_data[single_folder]['patterns'] = new_pattern_folder
+    data = copy_outputs_data
 
     logger.info("{}:{}:BEGIN".format(cmo_project_id, job_uuid), extra={'message_type': "INFO"})
 
@@ -339,7 +291,6 @@ def copy_outputs(cmo_project_id, job_uuid, toil_work_dir, user_out_dir):
         dst_dir = os.path.join(user_out_dir, file_type)
         if not os.path.isdir(dst_dir):
             os.makedirs(dst_dir)
-
         file_list = create_file_list(toil_work_dir, data[file_type]["patterns"])
 
         cmds = create_parallel_cp_commands(file_list, dst_dir, data[file_type]["parallels"])
@@ -370,6 +321,8 @@ def copy_outputs(cmo_project_id, job_uuid, toil_work_dir, user_out_dir):
 
     if exitcode == 0:
         logger.info("{}:{}:DONE".format(cmo_project_id, job_uuid), extra={'message_type': "INFO"})
+        #create portal files
+        create_portal_files(cmo_project_id,toil_work_dir,user_out_dir)
     else:
         logger.info("{}:{}:FAILED".format(cmo_project_id, job_uuid), extra={'message_type': "INFO"})
 
@@ -388,7 +341,7 @@ def main():
         # construct and cerate the final user output directory
         user_out_dir = os.path.join(params.user_out_base_dir, params.cmo_project_id + "." + params.job_uuid)
 
-        copy_ops = True
+	copy_ops = True
 
         if not os.path.isdir(user_out_dir):
             os.makedirs(user_out_dir)

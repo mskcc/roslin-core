@@ -182,7 +182,7 @@ mkdir -p ${output_directory}
 mkdir -p ${output_directory}/log
 
 # override CMO_RESOURC_CONFIG only while cwltoil is running
-export CMO_RESOURCE_CONFIG="${ROSLIN_PIPELINE_BIN_PATH}/cwl/roslin_resources.json"
+export CMO_RESOURCE_CONFIG="${ROSLIN_PIPELINE_BIN_PATH}/scripts/roslin_resources.json"
 
 if [ -z "${JOB_UUID}" ]
 then
