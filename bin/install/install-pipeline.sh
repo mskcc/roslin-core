@@ -81,6 +81,9 @@ mkdir -p ${ROSLIN_PIPELINE_BIN_PATH}/img
 # cwl wrappers
 mkdir -p ${ROSLIN_PIPELINE_BIN_PATH}/cwl
 
+# pipeline scripts
+mkdir -p ${ROSLIN_PIPELINE_BIN_PATH}/scripts
+
 # toil tmp
 mkdir -p ${ROSLIN_PIPELINE_BIN_PATH}/tmp
 
@@ -100,6 +103,7 @@ mkdir -p ${ROSLIN_PIPELINE_OUTPUT_PATH}
 # group should have read/write/execute permission
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/img
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/cwl
+chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/scripts
 
 # everyone should have read/write/execute permission
 chmod 777 ${ROSLIN_PIPELINE_BIN_PATH}/tmp
@@ -117,6 +121,9 @@ md5sum -c checksum.dat
 
 # copy cwl wrappers
 cp -R ${install_temp_path}/setup/cwl/* ${ROSLIN_PIPELINE_BIN_PATH}/cwl/
+
+# copy pipeline scripts
+cp -R ${install_temp_path}/setup/bin/* ${ROSLIN_PIPELINE_BIN_PATH}/scripts/
 
 # check md5 checksum
 cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl

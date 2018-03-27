@@ -343,6 +343,13 @@ def main():
             os.path.join(params.cmo_project_path, filename),
             os.path.join(work_dir, filename)
         )
+    clinical_data_file_name = "{}_sample_data_clinical.txt".format(params.cmo_project_id)
+    if os.path.exists(os.path.join(params.cmo_project_path, clinical_data_file_name)):
+        copyfile(
+            os.path.join(params.cmo_project_path, clinical_data_file_name),
+            os.path.join(work_dir, clinical_data_file_name)
+        )
+
 
     # convert any relative path in inputs.yaml (e.g. path: ../abc)
     # to absolute path (e.g. path: /ifs/abc)
