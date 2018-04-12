@@ -33,13 +33,22 @@ def bsub(bsubline):
     return lsf_job_id
 
 
-def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, workflow_name, restart_jobstore_uuid, debug_mode):
+def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
     "submit roslin-runner to the w node"
 
+    batch_system = "lsf"
     mem = 1
     cpu = 1
     leader_node = "w01"
     queue_name = "control"
+
+    # if a single-node was requested, ask LSF for a largeHG node with more mem/cpu
+    if single_node:
+        batch_system = "singleMachine"
+        mem = 384
+        cpu = 32
+        leader_node = "t01"
+        queue_name = "sol"
 
     lsf_proj_name = "{}:{}".format(cmo_project_id, job_uuid)
     job_name = "leader:{}:{}".format(cmo_project_id, job_uuid)
@@ -48,18 +57,20 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, wor
     input_yaml = "inputs.yaml"
 
     if pipeline_name_version != None:
-        job_command = "roslin-runner.sh -v {} -w {} -i {} -b lsf -p {} -j {} -o {}".format(
+        job_command = "roslin-runner.sh -v {} -w {} -i {} -b {} -p {} -j {} -o {}".format(
             pipeline_name_version,
             workflow_name,
             input_yaml,
+            batch_system,
             cmo_project_id,
             job_uuid,
             output_dir
         )
     else:
-        job_command = "roslin-runner.sh -w {} -i {} -b lsf -p {} -j {} -o {}".format(
+        job_command = "roslin-runner.sh -w {} -i {} -b {} -p {} -j {} -o {}".format(
             workflow_name,
             input_yaml,
+            batch_system,
             cmo_project_id,
             job_uuid,
             output_dir
@@ -306,10 +317,17 @@ def main():
     )
 
     parser.add_argument(
+        "--single-node",
+        action="store_true",
+        dest="single_node",
+        help="Submit roslin-runner to LSF, but in singleMachine mode"
+    )
+
+    parser.add_argument(
         "--pipeline",
         action="store",
         dest="pipeline_name_version",
-        help="Pipeline name/version (e.g. variant/1.0.0)",
+        help="Pipeline name/version (e.g. variant/2.2.0)",
         required=True
     )
 
@@ -365,7 +383,8 @@ def main():
         params.pipeline_name_version,
         params.workflow_name,
         params.restart_jobstore_uuid,
-        params.debug_mode
+        params.debug_mode,
+        params.single_node
     )
 
     print lsf_proj_name

@@ -39,7 +39,7 @@ OPTIONS:
    -r      Restart the workflow with the given job store UUID
    -z      Show list of supported workflows
    -d      Enable debugging (default="enabled")
-           fixme: you're not allowed to disable this right now
+           fixme: you are not allowed to disable this right now
 
 OPTIONS for MSKCC LSF+TOIL:
 
@@ -240,8 +240,12 @@ cwltoil \
     ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
     ${input_filename} \
     --jobStore file://${jobstore_path} \
-    --defaultDisk 10G \
-    --defaultMem 50G \
+    --defaultDisk 16G \
+    --defaultMemory 48G \
+    --defaultCores 1 \
+    --maxDisk 256G \
+    --maxMemory 384G \
+    --maxCores 32 \
     --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG \
     --no-container \
     --not-strict \
