@@ -37,18 +37,11 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, wor
     "submit roslin-runner to the w node"
 
     batch_system = "lsf"
-    mem = 1
-    cpu = 1
-    leader_node = "w01"
     queue_name = "control"
 
-    # if a single-node was requested, ask LSF for a largeHG node with more mem/cpu
+    # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
         batch_system = "singleMachine"
-        mem = 384
-        cpu = 32
-        leader_node = "t01"
-        queue_name = "sol"
 
     lsf_proj_name = "{}:{}".format(cmo_project_id, job_uuid)
     job_name = "leader:{}:{}".format(cmo_project_id, job_uuid)
@@ -86,10 +79,7 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, wor
 
     bsubline = [
         "bsub",
-        "-R", "select[hname={}]".format(leader_node),
         "-q", queue_name,
-        "-R", "rusage[mem={}]".format(mem),
-        "-n", str(cpu),
         "-P", lsf_proj_name,
         "-J", job_name,
         "-Jd", job_desc,

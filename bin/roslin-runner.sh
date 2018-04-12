@@ -240,12 +240,12 @@ cwltoil \
     ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
     ${input_filename} \
     --jobStore file://${jobstore_path} \
-    --defaultDisk 16G \
+    --defaultDisk 24G \
     --defaultMemory 48G \
     --defaultCores 1 \
-    --maxDisk 256G \
-    --maxMemory 384G \
-    --maxCores 32 \
+    --maxDisk 128G \
+    --maxMemory 256G \
+    --maxCores 16 \
     --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG \
     --no-container \
     --not-strict \
