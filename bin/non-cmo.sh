@@ -63,6 +63,8 @@ Example:   non-cmo.sh --tool "remove-variants" --version "0.1.1" --language "pyt
 EOF
 }
 
+# ::TODO:: This causes cmo_facets to return exitcode 0 always, but we need to fix FACETS itself.
+export FACETS_OVERRIDE_EXITCODE="set"
 
 if [ -z "$language_name" ]
 then
