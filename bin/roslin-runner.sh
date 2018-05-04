@@ -229,16 +229,15 @@ printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
 echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAME}-${ROSLIN_PIPELINE_VERSION}, cmo-${ROSLIN_CMO_VERSION}"
 
 # set PYTHONPATH
-export PYTHONPATH="${ROSLIN_CMO_PYTHON_PATH}"
+export PYTHONPATH="${ROSLIN_CMO_PYTHON_PATH}:${ROSLIN_TOIL_PYTHON_PATH}"
 
-# add cmo and sing to PATH
-export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
+# add cmo, sing, and toil to PATH
+export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_TOIL_BIN_PATH}:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
 # run cwltoil
 set -o pipefail
 cwltoil \
-    ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
-    ${input_filename} \
+    ${restart_options} \        
     --jobStore file://${jobstore_path} \
     --defaultDisk 24G \
     --defaultMemory 48G \
@@ -255,7 +254,9 @@ cwltoil \
     --writeLogs	${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
     --workDir ${ROSLIN_PIPELINE_BIN_PATH}/tmp \
-    --outdir ${output_directory} ${restart_options} ${batch_sys_options} ${debug_options} \
+    --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
+    ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
+    ${input_filename} \
     | tee ${output_directory}/output-meta.json
 exit_code=$?
 
