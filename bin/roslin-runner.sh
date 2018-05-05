@@ -229,18 +229,15 @@ printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
 echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAME}-${ROSLIN_PIPELINE_VERSION}, cmo-${ROSLIN_CMO_VERSION}"
 
 # set PYTHONPATH
-export PYTHONPATH="${ROSLIN_CMO_PYTHON_PATH}"
+export PYTHONPATH="${ROSLIN_CMO_PYTHON_PATH}:${ROSLIN_TOIL_PYTHON_PATH}"
 
-# add cmo and sing to PATH
-export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
-
-# load the toil virtual env
-source ${ROSLIN_TOIL_BIN_PATH}/activate
+# add cmo, sing, and toil to PATH
+export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_TOIL_BIN_PATH}:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
 # run cwltoil
 set -o pipefail
 cwltoil \
-    ${restart_options} \
+    ${restart_options} \        
     --jobStore file://${jobstore_path} \
     --defaultDisk 24G \
     --defaultMemory 48G \
@@ -268,9 +265,6 @@ unset CMO_RESOURCE_CONFIG
 
 # revert TOIL_LSF_PROJECT
 unset TOIL_LSF_PROJECT
-
-# revert virtual env
-deactivate
 
 printf "\n<--- ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n\n"
 
