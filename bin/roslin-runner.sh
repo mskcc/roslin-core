@@ -237,7 +237,7 @@ export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_TOIL_BIN_PATH}:${ROSLIN_CORE_BIN_PAT
 # run cwltoil
 set -o pipefail
 cwltoil \
-    ${restart_options} \        
+    ${restart_options} \
     --jobStore file://${jobstore_path} \
     --defaultDisk 24G \
     --defaultMemory 48G \
