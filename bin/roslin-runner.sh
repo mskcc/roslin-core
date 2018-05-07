@@ -232,9 +232,6 @@ source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/v
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
-# load the toil virtual env
-source ${ROSLIN_TOIL_BIN_PATH}/activate
-
 # run cwltoil
 set -o pipefail
 cwltoil \
@@ -266,9 +263,6 @@ unset CMO_RESOURCE_CONFIG
 
 # revert TOIL_LSF_PROJECT
 unset TOIL_LSF_PROJECT
-
-# revert virtual env
-deactivate
 
 printf "\n<--- ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n\n"
 
