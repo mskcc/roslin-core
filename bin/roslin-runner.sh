@@ -227,12 +227,10 @@ jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/jobstore-${job_store_uuid}"
 printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
 
 echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAME}-${ROSLIN_PIPELINE_VERSION}, cmo-${ROSLIN_CMO_VERSION}"
-
-# set PYTHONPATH
-export PYTHONPATH="${ROSLIN_CMO_PYTHON_PATH}:${ROSLIN_TOIL_PYTHON_PATH}"
-
-# add cmo, sing, and toil to PATH
-export PATH=${ROSLIN_CMO_BIN_PATH}:${ROSLIN_TOIL_BIN_PATH}:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
+# Load the virtualenv
+source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/activate
+# add virtualenv and sing to PATH
+export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
 # run cwltoil
 set -o pipefail
