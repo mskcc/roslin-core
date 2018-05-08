@@ -6,10 +6,12 @@ language_version=""
 language_name=""
 tool_name=""
 tool_version=""
+command=""
 language_version_flag=0
 language_name_flag=0
 tool_name_flag=0
 tool_version_flag=0
+command_flag=0
 for var in $@
 do
 
@@ -33,6 +35,11 @@ do
         # we have the language name
         language_name=$var
         language_name_flag=0
+    elif [ $command_flag -eq 1 ]
+    then
+        # we have the command
+        command=$var
+        command_flag=0
     elif [ "$var" == "--language_version" ]
     then
         # we are going to get the language version
@@ -48,6 +55,10 @@ do
     then
         # we are going to get the tool name
         tool_name_flag=1
+    elif [ "$var" == "--cmd" ]
+    then
+        # we are going to get a command
+        command_flag=1
     else
         # we're handling tool options
         tool_opts+=("$var")
@@ -57,9 +68,9 @@ done
 usage()
 {
 cat << EOF
-Usage:     non-cmo.sh <tool> <version> <language> <language_version> <[options]
+Usage:     tool.sh <tool> <version> <language> <language_version> <command> [options]
 
-Example:   non-cmo.sh --tool "remove-variants" --version "0.1.1" --language "python" --language_version "default" --help 
+Example:   tool.sh --tool "remove-variants" --version "0.1.1" --language "python" --language_version "default" --cmd --help 
 EOF
 }
 
@@ -97,4 +108,4 @@ language_cmd=$(eval $language_path)
 language_cmd="${language_cmd:1:${#language_cmd}-2}"
 tool_cmd=$(eval $tool_path)
 tool_cmd="${tool_cmd:1:${#tool_cmd}-2}"
-eval "$language_cmd ${tool_cmd} ${tool_opts[*]}"
+eval "$language_cmd ${tool_cmd} ${command} ${tool_opts[*]}"
