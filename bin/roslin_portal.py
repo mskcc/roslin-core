@@ -14,6 +14,7 @@ import subprocess
 from collections import defaultdict
 import shutil
 import logging
+import redis
 
 # create logger
 logger = logging.getLogger("roslin_portal")
@@ -27,7 +28,23 @@ log_file_handler.setFormatter(log_formatter)
 # add the handlers to the logger
 logger.addHandler(log_file_handler)
 
-def run_command(params,pipeline_script_path):
+def publish_to_redis(output_directory,project_name,portal_status):
+    # connect to redis
+    logger.info('-------Sending to Redis-------')
+    logger.info('project name: ' + project_name)
+    logger.info('output directory: ' + output_directory)
+    logger.info('portal status: ' + portal_status)
+    data = {}
+    data['output_directory'] = output_directory
+    data['portal_status'] = portal_status
+    data['project_name'] = project_name
+    redis_host = os.environ.get("ROSLIN_REDIS_HOST")
+    redis_port = int(os.environ.get("ROSLIN_REDIS_PORT"))
+    redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
+    redis_client.publish('roslin-done', json.dumps(data))
+
+
+def run_command(params,pipeline_script_path,output_directory,project_name):
     script_name = 'roslin_portal_helper.py'    
     pipeline_script = os.path.join(pipeline_script_path,script_name)
     params_dict = params
@@ -45,7 +62,13 @@ def run_command(params,pipeline_script_path):
     logger.info('---------- Running portal helper ----------')
     logger.info('Script path: ' + pipeline_script)
     logger.info('Args: '+ ' '.join(command))
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE)    
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    proc.communicate()
+    exit_code = proc.wait()
+    if exit_code == 0:
+        publish_to_redis(output_directory,project_name,1)
+    else:
+        publish_to_redis(output_directory,project_name,0)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="convert current project files to yaml input")
@@ -79,4 +102,4 @@ if __name__ == "__main__":
     portal_helper_args['facets_directory'] = os.path.join(output_directory,'facets')
     portal_helper_args['script_path'] = params.pipeline_bin_path
    
-    run_command(portal_helper_args,params.pipeline_bin_path)
+    run_command(portal_helper_args,params.pipeline_bin_path,output_directory,project_name)
