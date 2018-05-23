@@ -30,10 +30,10 @@ logger.addHandler(log_file_handler)
 
 def publish_to_redis(output_directory,project_name,portal_status):
     # connect to redis
-    print('-------Sending to Redis-------')
-    print('project name: ' + project_name)
-    print('output directory: ' + output_directory)
-    print('portal status: ' + str(portal_status))    
+    logger.info('-------Sending to Redis-------')
+    logger.info('project name: ' + project_name)
+    logger.info('output directory: ' + output_directory)
+    logger.info('portal status: ' + str(portal_status))    
     data = {}
     data['output_directory'] = output_directory
     data['portal_status'] = str(portal_status)
