@@ -16,21 +16,21 @@ import shutil
 import logging
 import redis
 
-# create logger
 logger = logging.getLogger("roslin_portal")
 logger.setLevel(logging.INFO)
-# create the file handler
 log_file_handler = logging.FileHandler('roslin_portal.log')
 log_file_handler.setLevel(logging.INFO)
-# create a logging format
 log_formatter = logging.Formatter('%(asctime)s - %(message)s')
 log_file_handler.setFormatter(log_formatter)
-# add the handlers to the logger
 logger.addHandler(log_file_handler)
 
-def publish_to_redis(output_directory,project_name,portal_status):
+redis_host = os.environ.get("ROSLIN_REDIS_HOST")
+redis_port = int(os.environ.get("ROSLIN_REDIS_PORT"))
+redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
+
+def publish_jira_update_to_redis(output_directory,project_name,portal_status):
     # connect to redis
-    logger.info('-------Sending to Redis-------')
+    logger.info('-------Sending JIRA update to Redis-------')
     logger.info('project name: ' + project_name)
     logger.info('output directory: ' + output_directory)
     logger.info('portal status: ' + str(portal_status))    
@@ -38,11 +38,14 @@ def publish_to_redis(output_directory,project_name,portal_status):
     data['output_directory'] = output_directory
     data['portal_status'] = str(portal_status)
     data['project_name'] = project_name
-    redis_host = os.environ.get("ROSLIN_REDIS_HOST")
-    redis_port = int(os.environ.get("ROSLIN_REDIS_PORT"))
-    redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
     redis_client.publish('roslin-done', json.dumps(data))
 
+def publish_mercurial_update_request_to_redis(project_name):
+    logger.info('-------Sending Mercurial update request to Redis-------')
+    logger.info('project name: ' + project_name)
+    data = dict()
+    data['project_name'] = project_name
+    redis_client.publish('roslin-mercurial-update', json.dumps(data))
 
 def run_command(params,pipeline_script_path,output_directory,project_name):
     script_name = 'roslin_portal_helper.py'    
@@ -65,17 +68,18 @@ def run_command(params,pipeline_script_path,output_directory,project_name):
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     proc.communicate()
     exit_code = proc.wait()
-    if exit_code == 0:
-        publish_to_redis(output_directory,project_name,1)
-    else:
-        publish_to_redis(output_directory,project_name,0)
+    return exit_code
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="convert current project files to yaml input")
     parser.add_argument('--pipeline_bin_path',required=True,help='The path to the pipeline scripts')
     parser.add_argument('--copy_outputs_directory',required=True,help='The output path for roslin copy outputs')
     parser.add_argument('--project_name',required=True,help='The name of the project')
+    parser.add_argument('--disable_jira_update',default=False,action='store_true',help='If not updating JIRA, skips portion that comments to JIRA ticket associated with project.')
+    parser.add_argument('--disable_portal_repo_update', default=False, action='store_true', help='If not updating cbioportal, skips submitting request to update the Mercurial repo.')
     params = parser.parse_args()
+    disable_jira_update = params.disable_jira_update
+    disable_portal_repo_update = params.disable_portal_repo_update
     portal_helper_args = {}
     output_directory = params.copy_outputs_directory
     if not os.path.exists(output_directory):
@@ -102,4 +106,14 @@ if __name__ == "__main__":
     portal_helper_args['facets_directory'] = os.path.join(output_directory,'facets')
     portal_helper_args['script_path'] = params.pipeline_bin_path
    
-    run_command(portal_helper_args,params.pipeline_bin_path,output_directory,project_name)
+    exit_code = run_command(portal_helper_args,params.pipeline_bin_path,output_directory,project_name)
+
+    if not disable_jira_update:
+        if exit_code == 0:
+            publish_jira_update_to_redis(portal_output_directory,project_name,1)
+        else:
+            publish_jira_update_to_redis(portal_output_directory,project_name,0) 
+            disable_portal_repo_update = True
+
+    if not disable_portal_repo_update:
+         publish_mercurial_update_request_to_redis(project_name)
