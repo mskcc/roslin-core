@@ -227,8 +227,8 @@ def create_parallel_cp_commands(file_list, dst_dir, num_of_parallels_per_host):
 
     return cmds
 
-def run_portal_command(params,folder_args):
-    script_name = 'roslin_portal.py'   
+def run_analysis_command(params,folder_args):
+    script_name = 'roslin_analysis.py'
     pipeline_script = script_name
     params_dict = params
     command_args = []
@@ -242,20 +242,20 @@ def run_portal_command(params,folder_args):
             logger.error(error_string,extra={'message_type': "Error"})
             sys.exit(1)
     command = ['python',pipeline_script] + command_args
-    logger.info('---------- Running portal ----------',extra={'message_type': "Portal INFO"})
-    logger.info('Script path: ' + pipeline_script,extra={'message_type': "Portal INFO"})
-    logger.info('Args: '+ ' '.join(command),extra={'message_type': "Portal INFO"})
+    logger.info('---------- Running analysis ----------',extra={'message_type': "Analysis INFO"})
+    logger.info('Script path: ' + pipeline_script,extra={'message_type': "Analysis INFO"})
+    logger.info('Args: '+ ' '.join(command),extra={'message_type': "Analysis INFO"})
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     
-def create_portal_files(cmo_project_id,toil_work_dir,user_out_dir):
+def create_analysis_files(cmo_project_id,toil_work_dir,user_out_dir):
     pipeline_path = toil_work_dir.split("outputs")[0]
     scripts_path = os.path.join(pipeline_path,'bin','scripts')
-    portal_args = {}
-    portal_args['pipeline_bin_path'] = scripts_path
-    portal_args['copy_outputs_directory'] = user_out_dir
-    portal_args['project_name'] = cmo_project_id
+    analysis_args = {}
+    analysis_args['pipeline_bin_path'] = scripts_path
+    analysis_args['copy_outputs_directory'] = user_out_dir
+    analysis_args['project_name'] = cmo_project_id
     folder_args=['pipeline_bin_path','copy_outputs_directory']
-    run_portal_command(portal_args,folder_args)
+    run_analysis_command(analysis_args,folder_args)
 
 def copy_outputs(cmo_project_id, job_uuid, toil_work_dir, user_out_dir):
     "copy output files in toil work dir to the final destination"
@@ -321,8 +321,8 @@ def copy_outputs(cmo_project_id, job_uuid, toil_work_dir, user_out_dir):
 
     if exitcode == 0:
         logger.info("{}:{}:DONE".format(cmo_project_id, job_uuid), extra={'message_type': "INFO"})
-        #create portal files
-        create_portal_files(cmo_project_id,toil_work_dir,user_out_dir)
+        #create analysis files
+        create_analysis_files(cmo_project_id,toil_work_dir,user_out_dir)
     else:
         logger.info("{}:{}:FAILED".format(cmo_project_id, job_uuid), extra={'message_type': "INFO"})
 
