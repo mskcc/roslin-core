@@ -16,9 +16,9 @@ import shutil
 import logging
 import redis
 
-logger = logging.getLogger("roslin_portal")
+logger = logging.getLogger("roslin_analysis")
 logger.setLevel(logging.INFO)
-log_file_handler = logging.FileHandler('roslin_portal.log')
+log_file_handler = logging.FileHandler('roslin_analysis.log')
 log_file_handler.setLevel(logging.INFO)
 log_formatter = logging.Formatter('%(asctime)s - %(message)s')
 log_file_handler.setFormatter(log_formatter)
@@ -48,7 +48,7 @@ def publish_mercurial_update_request_to_redis(project_name):
     redis_client.publish('roslin-mercurial-update', json.dumps(data))
 
 def run_command(params,pipeline_script_path,output_directory,project_name):
-    script_name = 'roslin_portal_helper.py'    
+    script_name = 'roslin_analysis_helper.py'    
     pipeline_script = os.path.join(pipeline_script_path,script_name)
     params_dict = params
     command_args = []
@@ -62,7 +62,7 @@ def run_command(params,pipeline_script_path,output_directory,project_name):
             logger.error(error_string)
             sys.exit(1)
     command = ['python',pipeline_script] + command_args
-    logger.info('---------- Running portal helper ----------')
+    logger.info('---------- Running analysis helper ----------')
     logger.info('Script path: ' + pipeline_script)
     logger.info('Args: '+ ' '.join(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     params = parser.parse_args()
     disable_jira_update = params.disable_jira_update
     disable_portal_repo_update = params.disable_portal_repo_update
-    portal_helper_args = {}
+    analysis_helper_args = {}
     output_directory = params.copy_outputs_directory
     if not os.path.exists(output_directory):
         error_string = "The copy outputs directory does not exist"
@@ -97,16 +97,17 @@ if __name__ == "__main__":
     sample_summary_file = project_name + '_SampleSummary.txt'
     request_file = project_name + '_request.txt'
 
-    portal_helper_args['output_directory'] = portal_output_directory
-    portal_helper_args['clinical_data'] = os.path.join(output_directory,'inputs',clinical_data_file)
-    portal_helper_args['sample_summary'] = os.path.join(output_directory,'qc',sample_summary_file)
-    portal_helper_args['request_file'] = os.path.join(output_directory,request_file)
-    portal_helper_args['roslin_output'] = os.path.join(output_directory,'log','stdout.log')
-    portal_helper_args['maf_directory'] = os.path.join(output_directory,'maf')
-    portal_helper_args['facets_directory'] = os.path.join(output_directory,'facets')
-    portal_helper_args['script_path'] = params.pipeline_bin_path
+    analysis_helper_args['output_directory'] = portal_output_directory
+    analysis_helper_args['clinical_data'] = os.path.join(output_directory,'inputs',clinical_data_file)
+    analysis_helper_args['sample_summary'] = os.path.join(output_directory,'qc',sample_summary_file)
+    analysis_helper_args['request_file'] = os.path.join(output_directory,request_file)
+    analysis_helper_args['roslin_output'] = os.path.join(output_directory,'log','stdout.log')
+    analysis_helper_args['maf_directory'] = os.path.join(output_directory,'maf')
+    analysis_helper_args['facets_directory'] = os.path.join(output_directory,'facets')
+    analysis_helper_args['script_path'] = params.pipeline_bin_path
+    analysis_helper_args['disable_portal_repo_update'] = params.disable_portal_repo_update
    
-    exit_code = run_command(portal_helper_args,params.pipeline_bin_path,output_directory,project_name)
+    exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name)
 
     if not disable_jira_update:
         if exit_code == 0:
