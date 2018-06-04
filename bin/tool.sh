@@ -108,4 +108,8 @@ language_cmd=$(eval $language_path)
 language_cmd="${language_cmd:1:${#language_cmd}-2}"
 tool_cmd=$(eval $tool_path)
 tool_cmd="${tool_cmd:1:${#tool_cmd}-2}"
-eval "$language_cmd ${tool_cmd} ${command} ${tool_opts[*]}"
+case "$tool_cmd" in
+    *sing.sh*) eval "${tool_cmd} ${command} ${tool_opts[*]}" ;;
+    *) eval "$language_cmd ${tool_cmd} ${command} ${tool_opts[*]}" ;;
+esac
+
