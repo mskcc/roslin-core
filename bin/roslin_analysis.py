@@ -107,7 +107,7 @@ if __name__ == "__main__":
     analysis_helper_args['script_path'] = params.pipeline_bin_path
     analysis_helper_args['disable_portal_repo_update'] = params.disable_portal_repo_update
    
-    exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name)
+    exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name) #0 success; 1 portal file creation fail; 2 validator fail
 
     if not disable_jira_update:
         if exit_code == 0:
@@ -117,4 +117,5 @@ if __name__ == "__main__":
             disable_portal_repo_update = True
 
     if not disable_portal_repo_update:
-         publish_mercurial_update_request_to_redis(project_name)
+        if exit_code == 0:
+            publish_mercurial_update_request_to_redis(project_name)
