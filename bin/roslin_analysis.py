@@ -25,23 +25,26 @@ log_file_handler.setFormatter(log_formatter)
 logger.addHandler(log_file_handler)
 
 redis_host = os.environ.get("ROSLIN_REDIS_HOST")
+core_bin_path = os.environ.get("ROSLIN_CORE_BIN_PATH")
 redis_port = int(os.environ.get("ROSLIN_REDIS_PORT"))
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
 
 def publish_jira_update_to_redis(output_directory,project_name,portal_status):
     # connect to redis
-    logger.info('-------Sending JIRA update to Redis-------')
+    logger.info('------- Sending JIRA update to Redis -------')
     logger.info('project name: ' + project_name)
     logger.info('output directory: ' + output_directory)
-    logger.info('portal status: ' + str(portal_status))    
+    logger.info('portal status: ' + str(portal_status))
+    logger.info('core bin path: '+ core_bin_path)
     data = {}
     data['output_directory'] = output_directory
+    data['core_bin_path'] = core_bin_path
     data['portal_status'] = str(portal_status)
     data['project_name'] = project_name
     redis_client.publish('roslin-done', json.dumps(data))
 
 def publish_mercurial_update_request_to_redis(project_name):
-    logger.info('-------Sending Mercurial update request to Redis-------')
+    logger.info('------- Sending Mercurial update request to Redis -------')
     logger.info('project name: ' + project_name)
     data = dict()
     data['project_name'] = project_name
@@ -55,12 +58,16 @@ def run_command(params,pipeline_script_path,output_directory,project_name):
     for single_arg_key in params_dict:
         single_arg = '--'+ single_arg_key
         single_arg_value = params_dict[single_arg_key]
-        command_args.append(single_arg)
-        command_args.append(single_arg_value)
-        if not os.path.exists(single_arg_value):
-            error_string = single_arg_value + " does not exist"
-            logger.error(error_string)
-            sys.exit(1)
+	if single_arg_key != 'disable_portal_repo_update':
+		command_args.append(str(single_arg))
+		command_args.append(str(single_arg_value))
+		if not os.path.exists(single_arg_value):
+			error_string = single_arg_value + " does not exist"
+			logger.error(error_string)
+			sys.exit(1)
+	else:
+		if single_arg_value == True:
+			command_args.append(str(single_arg))
     command = ['python',pipeline_script] + command_args
     logger.info('---------- Running analysis helper ----------')
     logger.info('Script path: ' + pipeline_script)
@@ -107,15 +114,14 @@ if __name__ == "__main__":
     analysis_helper_args['script_path'] = params.pipeline_bin_path
     analysis_helper_args['disable_portal_repo_update'] = params.disable_portal_repo_update
    
-    exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name) #0 success; 1 portal file creation fail; 2 validator fail
+    exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name)
 
     if not disable_jira_update:
         if exit_code == 0:
-            publish_jira_update_to_redis(portal_output_directory,project_name,1)
+            publish_jira_update_to_redis(output_directory,project_name,0)
         else:
-            publish_jira_update_to_redis(portal_output_directory,project_name,0) 
+            publish_jira_update_to_redis(output_directory,project_name,1)
             disable_portal_repo_update = True
 
     if not disable_portal_repo_update:
-        if exit_code == 0:
-            publish_mercurial_update_request_to_redis(project_name)
+         publish_mercurial_update_request_to_redis(project_name)
