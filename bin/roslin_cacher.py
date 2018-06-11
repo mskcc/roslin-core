@@ -30,13 +30,21 @@ def poll(lsf_queue, only_me):
          "bjobs",
          "-a",
          "-o", "user jobid proj_name job_name stat submit_time start_time finish_time run_time effective_resreq exec_host delimiter='\t'",
-         "-q", "control",
+         "-q", "controlR",
          "-noheader"
     ]
+
+    bjobs_jenkins_control = [
+         "bjobs",
+	 "-a",
+	 "-o",
+	 "user jobid proj_name job_name stat submit_time start_time finish_time run_time effective_resreq exec_host delimiter='\t'",
+	 "-q", "control",
+	 "-noheader"
+     ]
     
     if not only_me:
         bjobs_jenkins = copy.copy(bjobs)
-        bjobs_jenkins_control = copy.copy(bjobs_control)
         bjobs.extend(["-u", "HAYSTACK"])
         bjobs_control.extend(["-u","HAYSTACK"])
         bjobs_jenkins.extend(["-u", "jenkins"])
