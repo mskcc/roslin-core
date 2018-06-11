@@ -33,11 +33,11 @@ def bsub(bsubline):
     return lsf_job_id
 
 
-def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
+def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, leader_queue, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
     "submit roslin-runner to the w node"
 
     batch_system = "lsf"
-    queue_name = "control"
+    queue_name = leader_queue
 
     # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
@@ -306,6 +306,13 @@ def main():
         help="Run the runner in debug mode"
     )
 
+    parser.add_argument("--leader-queue",
+	    action="store",
+	    dest="leader_queue",
+	    default="controlR",
+	    help="The queue to run the leader job",
+	    required=False)
+
     parser.add_argument(
         "--single-node",
         action="store_true",
@@ -371,6 +378,7 @@ def main():
         job_uuid,
         work_dir,
         params.pipeline_name_version,
+	params.leader_queue,
         params.workflow_name,
         params.restart_jobstore_uuid,
         params.debug_mode,
