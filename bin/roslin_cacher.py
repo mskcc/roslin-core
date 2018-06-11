@@ -39,7 +39,7 @@ def poll(lsf_queue, only_me):
 	 "-a",
 	 "-o",
 	 "user jobid proj_name job_name stat submit_time start_time finish_time run_time effective_resreq exec_host delimiter='\t'",
-	 "-q", "control",
+	 "-q", "controlR",
 	 "-noheader"
      ]
     
