@@ -1,0 +1,7 @@
+name: core
+version: 2.0.3
+description: Roslin Core v2.0.3
+root: /ifs/work/pi/roslin-pipelines
+redis:
+  host: "pitchfork"
+  port: 9006
