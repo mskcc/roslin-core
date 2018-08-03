@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export ROSLIN_CORE_VERSION="2.0.0"
+export ROSLIN_CORE_VERSION="2.0.4"
 
 # path to all the Roslin Core versions are/will be installed
 export ROSLIN_CORE_ROOT="/ifs/work/pi/roslin-core"
