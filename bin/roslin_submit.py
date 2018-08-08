@@ -40,7 +40,7 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
     node_request = ['-q', leader_node]
     # To use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
     if leader_node == 'largeHG':
-        node_request = ['-M', '1440']
+        node_request = ['-M', '720']
 
     # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
