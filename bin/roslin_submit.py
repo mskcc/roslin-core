@@ -40,7 +40,10 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
     node_request = ['-q', leader_node]
     # To use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
     if leader_node == 'largeHG':
-        node_request = ['-M', '720']
+        node_request = ['-M', '512', '-R', 'rusage[iounits=4]', '-n', '8']
+    # To submit short jobs, specify estimated run time as 59 minutes or less
+    elif leader_node == 'short':
+        node_request = ['-We', '0:59', '-M', '32', '-R', 'rusage[iounits=4]', '-n', '8']
 
     # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
@@ -311,7 +314,7 @@ def main():
     parser.add_argument("--leader-node",
         action="store",
         dest="leader_node",
-        choices=['controlR', 'control', 'largeHG'],
+        choices=['controlR', 'control', 'largeHG', 'short'],
         default="controlR",
         help="The LSF node for the leader job. Default: controlR",
         required=False)
