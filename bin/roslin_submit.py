@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
-import glob
-import subprocess
-import argparse
-import uuid
-import os
+from __future__ import print_function
 from shutil import copyfile
+import os, sys, glob, uuid, argparse, subprocess
 import hashlib
 import datetime
 import json
@@ -23,12 +20,17 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S %Z%z"
 def bsub(bsubline):
     "execute lsf bsub"
 
+    print(bsubline, file=sys.stderr)
     process = subprocess.Popen(bsubline, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = process.stdout.readline()
+    print(output, file=sys.stderr)
 
-    # fixme: need better exception handling
-    print output
-    lsf_job_id = int(output.strip().split()[1].strip('<>'))
+    # Expected output looks like: Job <26552430> is submitted to queue <controlR>.
+    if re.match(r'Job <\d+> is submitted', output) is not None:
+        lsf_job_id = int(output.strip().split()[1].strip('<>'))
+    else:
+        print("ERROR: Job submission failed", file=sys.stderr)
+        sys.exit(1)
 
     return lsf_job_id
 
@@ -43,12 +45,11 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
         node_request = ['-M', '512']
     # to submit short jobs, specify estimated run time as 59 minutes or less
     elif leader_node == 'short':
-        node_request = ['-We', '0:59', '-M', '32']
+        node_request = ['-We', '0:59']
 
-    # if a single-node was requested, use roslin-runner in singleMachine mode with more resources
+    # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
         batch_system = "singleMachine"
-        node_request += ['-R', 'rusage[iounits=4]', '-n', '14']
 
     lsf_proj_name = "{}:{}".format(cmo_project_id, job_uuid)
     job_name = "leader:{}:{}".format(cmo_project_id, job_uuid)
@@ -391,9 +392,9 @@ def main():
         params.single_node
     )
 
-    print lsf_proj_name
-    print lsf_job_id
-    print work_dir
+    print(lsf_proj_name)
+    print(lsf_job_id)
+    print(work_dir)
 
     # fixme: wait till leader job shows up
     time.sleep(5)
