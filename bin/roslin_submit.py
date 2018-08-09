@@ -38,16 +38,17 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
 
     batch_system = "lsf"
     node_request = ['-q', leader_node]
-    # To use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
+    # to use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
     if leader_node == 'largeHG':
-        node_request = ['-M', '512', '-R', 'rusage[iounits=4]', '-n', '8']
-    # To submit short jobs, specify estimated run time as 59 minutes or less
+        node_request = ['-M', '512']
+    # to submit short jobs, specify estimated run time as 59 minutes or less
     elif leader_node == 'short':
-        node_request = ['-We', '0:59', '-M', '32', '-R', 'rusage[iounits=4]', '-n', '8']
+        node_request = ['-We', '0:59', '-M', '32']
 
-    # if a single-node was requested, use roslin-runner in singleMachine mode
+    # if a single-node was requested, use roslin-runner in singleMachine mode with more resources
     if single_node:
         batch_system = "singleMachine"
+        node_request += ['-R', 'rusage[iounits=4]', '-n', '14']
 
     lsf_proj_name = "{}:{}".format(cmo_project_id, job_uuid)
     job_name = "leader:{}:{}".format(cmo_project_id, job_uuid)
