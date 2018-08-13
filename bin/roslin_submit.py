@@ -20,10 +20,8 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S %Z%z"
 def bsub(bsubline):
     "execute lsf bsub"
 
-    print(bsubline, file=sys.stderr)
     process = subprocess.Popen(bsubline, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = process.stdout.readline()
-    print(output, file=sys.stderr)
 
     # Expected output looks like: Job <26552430> is submitted to queue <controlR>.
     if re.match(r'Job <\d+> is submitted', output) is not None:
