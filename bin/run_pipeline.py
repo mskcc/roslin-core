@@ -78,7 +78,7 @@ def run_workflow(params, input_yaml, workflow_name, output_dir_name):
 
     args = shlex.split(job_command)
 
-    print(args)
+    print(job_command)
     process_run = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return process_run, output_meta_json
@@ -328,6 +328,8 @@ def main():
 
     params = parser.parse_args()
 
+    print(params)
+
     # create a new unique job uuid
     params.job_uuid = params.job_uuid if params.job_uuid is not None else str(uuid.uuid1())
 
@@ -474,10 +476,10 @@ def main():
     successful_processes = set()
     while len(failed_processes) + len(successful_processes) < num_processes:
         for running_process in running_processes:
-            result = running_process.poll()
-            if result.returncode == 1:
+            returncode = running_process.poll()
+            if returncode == 1:
                 failed_processes.add(running_process)
-            if result.returncode == 0:
+            if returncode == 0:
                 successful_processes.add(running_process)
             time.sleep(.5)
         time.sleep(5)
