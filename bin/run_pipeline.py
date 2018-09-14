@@ -166,10 +166,10 @@ def execute_run_pipeline(params):
 
     # add find_svs conditional
     if find_sv:
-        find_svs_process = run_workflow(params, post_alignment_yaml, "find_svs.cwl", "find_svs")
+        find_svs_process = submit_process(params, post_alignment_yaml, "find_svs.cwl", "find_svs")
         running_processes.append(find_svs_process)
 
-    variant_calling_process = run_workflow(params, post_alignment_yaml, "variant_calling.cwl","variant_calling")
+    variant_calling_process = submit_process(params, post_alignment_yaml, "variant_calling.cwl","variant_calling")
     variant_calling_process.communicate() # wait for variant_calling to finish
     
     if variant_calling_process.poll() == 1:
@@ -180,7 +180,7 @@ def execute_run_pipeline(params):
     post_variant_calling_path = os.path.join(params.work_dir, "post-variant-calling.yaml")
     post_variant_calling_yaml = json2yaml.create_roslin_yaml(variant_calling_json, post_variant_calling_path,post_alignment_yaml)
 
-    filtering_process = run_workflow(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
+    filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
 
     running_processes.append(filtering_process) 
     
