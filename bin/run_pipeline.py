@@ -488,7 +488,7 @@ def main():
     num_fail = len(failed_processes)
 
     print("Summary, not including alignment process")
-    print("Num success %i" % num_sucess)
+    print("Num success %i" % num_success)
     print("Num fail %i" % num_fail)
 
 if __name__ == "__main__":
