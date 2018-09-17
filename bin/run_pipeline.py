@@ -108,7 +108,7 @@ def delete_tmp_dirs(workflow_jobs):
     for workflow_job in workflow_jobs:
         tmp_dirs_list = workflow_job.get_tmp_directories()
         for tmp_dir in tmp_dirs_list:
-            print("Should delete tmp_dir: %s" + tmp_dir)
+            print("Should delete tmp_dir: %s" % tmp_dir)
 
 
 def will_run_sv(request_file_path):
@@ -192,14 +192,15 @@ def execute_run_pipeline(params):
         for running_process in running_processes:
             cwl_name = running_process.workflow_name
             returncode = running_process.poll()
-            if returncode == 1:
-                if running_process not in failed_processes:
-                    print("FAILED: " + cwl_name)
-                    failed_processes.add(running_process)
-            if returncode == 0:
-                if running_process not in successful_processes:
-                    print("SUCCESS: " + cwl_name)
-                    successful_processes.add(running_process)
+            if running_process not in successful_processes or running_process not in failed_processes:
+                if returncode == 1:
+                    if running_process not in failed_processes:
+                        print("FAILED: " + cwl_name)
+                        failed_processes.add(running_process)
+                if returncode == 0:
+                    if running_process not in successful_processes:
+                        print("SUCCESS: " + cwl_name)
+                        successful_processes.add(running_process)
             time.sleep(.5)
         time.sleep(5)
 
