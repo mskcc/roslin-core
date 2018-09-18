@@ -228,7 +228,7 @@ def init_project(params):
         os.path.join(work_dir, "inputs.yaml")
     )
 
-    publish_to_redis(params.cmo_project_id, params.cmo_project_path, params.job_uuid)
+#    publish_to_redis(params.cmo_project_id, params.cmo_project_path, params.job_uuid)
 
 def main():
     "main function"
