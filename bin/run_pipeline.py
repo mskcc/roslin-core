@@ -232,4 +232,5 @@ if __name__ == "__main__":
     parser.add_argument("--work-dir", action="store", dest="work_dir", default=".", help="Working directory for project.")
 
     params = parser.parse_args()
+    print("Current working directory: " + os.getcwd())
     execute_run_pipeline(params)
