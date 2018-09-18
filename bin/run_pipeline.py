@@ -71,6 +71,7 @@ class WorkflowJob:
         args = shlex.split(job_command) 
         print("Running workflow %s" % self.workflow_name)
         print("Output directory: %s" % self.output_dir)
+        print("Running command %s" % job_command)
         self.process_run = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def communicate(self):
