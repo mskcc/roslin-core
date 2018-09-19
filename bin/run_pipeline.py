@@ -64,7 +64,7 @@ class WorkflowJob:
             job_command = job_command + " -d"
     
         return job_command 
-    
+ 
     def run_workflow(self):
         job_command = self.build_workflow_command()
         # TODO: add check if this workflow was previously completed; if complete, return 0    
@@ -73,6 +73,11 @@ class WorkflowJob:
         print("Output directory: %s" % self.output_dir)
         print("Running command %s" % job_command)
         self.process_run = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def already_exist(self):
+        if len(self.get_tmp_directories()) == 0:
+            return True
+        return False
 
     def communicate(self):
         print("Waiting for %s to complete..." % self.workflow_name)
@@ -83,7 +88,10 @@ class WorkflowJob:
         return self.process_run.poll()
 
     def get_tmp_directories(self):
-        return glob.glob(self.output_dir + os.sep + "tmp*")
+        tmp_dirs = glob.glob(self.output_dir + os.sep + "tmp*")
+        out_tmp_dirs =  glob.glob(self.output_dir + os.sep + "out_tmpdir*")
+        result = tmp_dirs + out_tmp_dirs
+        return result
 
     def get_output_json(self):
         return self.output_meta_json
@@ -145,7 +153,8 @@ def execute_run_pipeline(params):
 
     # Prototyping this for now
     alignment_process = submit_process(params, input_yaml, "alignment.cwl", "alignment")
-    alignment_process.communicate() #wait for alignment to complete
+    a_stdout, a_stderr = alignment_process.communicate() #wait for alignment to complete
+    print(a_stdout, a_stderr)
     running_processes = [ alignment_process ]
 
     if alignment_process.poll() == 1:
