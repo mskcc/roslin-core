@@ -111,7 +111,6 @@ def submit_process(params, input_yaml_file, workflow_name, output_dir_name):
     workflow_job = WorkflowJob(project_id, job_uuid, pipeline_name_version, batch_system, restart_jobstore_uuid, debug_mode, output_dir, work_dir, workflow_name, input_yaml_file)
     workflow_job.run_workflow()
     return workflow_job
-    
 
 def delete_tmp_dirs(workflow_jobs):
     for workflow_job in workflow_jobs:
@@ -154,11 +153,12 @@ def execute_run_pipeline(params):
     # Prototyping this for now
     alignment_process = submit_process(params, input_yaml, "alignment.cwl", "alignment")
     a_stdout, a_stderr = alignment_process.communicate() #wait for alignment to complete
-    print(a_stdout, a_stderr)
     running_processes = [ alignment_process ]
 
     if alignment_process.poll() == 1:
         print("Alignment broke; exiting")
+        print(a_stdout)
+        print(a_stderr)
         sys.exit(1)
 
     print("Alignment done.")
@@ -169,7 +169,9 @@ def execute_run_pipeline(params):
     post_alignment_yaml = json2yaml.create_roslin_yaml(alignment_json, post_alignment_path, input_yaml)
 
     gather_metrics_process = submit_process(params, post_alignment_yaml, "gather_metrics.cwl", "gather_metrics")
+    time.sleep(5)
     conpair_process = submit_process(params, post_alignment_yaml, "conpair.cwl", "conpair")
+    time.sleep(5)
 
     running_processes.append(gather_metrics_process)
     running_processes.append(conpair_process)
@@ -178,12 +180,16 @@ def execute_run_pipeline(params):
     if find_sv:
         find_svs_process = submit_process(params, post_alignment_yaml, "find_svs.cwl", "find_svs")
         running_processes.append(find_svs_process)
+    time.sleep(5)
 
     variant_calling_process = submit_process(params, post_alignment_yaml, "variant_calling.cwl","variant_calling")
-    variant_calling_process.communicate() # wait for variant_calling to finish
+    time.sleep(5)
+    v_stdout, v_stderr = variant_calling_process.communicate() # wait for variant_calling to finish
     
     if variant_calling_process.poll() == 1:
         print("Variant Calling broke; can't do filtering. Check.")
+        print(v_stdout)
+        print(v_stderr)
         sys.exit(1)
 
     variant_calling_json = variant_calling_process.get_output_json()
@@ -191,6 +197,7 @@ def execute_run_pipeline(params):
     post_variant_calling_yaml = json2yaml.create_roslin_yaml(variant_calling_json, post_variant_calling_path,post_alignment_yaml)
 
     filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
+    time.sleep(5)
 
     running_processes.append(filtering_process) 
     
