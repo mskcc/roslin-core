@@ -35,7 +35,7 @@ def configure_setup_settings(settings):
     # render
     content = template.render(
         core_version=settings["version"],
-        roslin_root=settings["name"],
+        roslin_root=settings["ROSLIN_CORE_ROOT"],
         core_redis_host=settings["redis"]["host"],
         core_redist_port=settings["redis"]["port"]        
     )
@@ -46,7 +46,7 @@ def main():
     "main function"
 
     if len(sys.argv) < 2:
-	print "USAGE: config.py configuration_file.yaml\nconfig.py configuration_file.yaml --testBuild"
+	print "USAGE: config.py configuration_file.yaml\nconfig.py configuration_file.yaml"
 	exit()
 
     settings = ruamel.yaml.load(
@@ -54,8 +54,7 @@ def main():
         ruamel.yaml.RoundTripLoader
     )
 
-    if sys.argv[2] == '--testBuild':
-        settings['ROSLIN_CORE_ROOT'] = os.environ['ROSLIN_ROOT']
+    settings['ROSLIN_CORE_ROOT'] = os.environ['ROSLIN_ROOT']
 
     configure_setup_settings(settings)
 

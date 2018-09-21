@@ -171,6 +171,8 @@ do
         exit 1
     fi
 
+    rm ${file}.bak
+
 done
 #<--
 
