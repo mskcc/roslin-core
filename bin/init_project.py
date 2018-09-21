@@ -17,87 +17,6 @@ DOC_VERSION = "1.0.0"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S %Z%z"
 
 
-def bsub(bsubline):
-    "execute lsf bsub"
-
-    process = subprocess.Popen(bsubline, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = process.stdout.readline()
-
-    # Expected output looks like: Job <26552430> is submitted to queue <controlR>.
-    if re.match(r'Job <\d+> is submitted', output) is not None:
-        lsf_job_id = int(output.strip().split()[1].strip('<>'))
-    else:
-        print("ERROR: Job submission failed", file=sys.stderr)
-        sys.exit(1)
-
-    return lsf_job_id
-
-
-def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, leader_node, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
-    "submit roslin-runner to the w node"
-
-    batch_system = "lsf"
-    node_request = ['-q', leader_node]
-    # to use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
-    if leader_node == 'largeHG':
-        node_request = ['-M', '512']
-    # to submit short jobs, specify estimated run time as 59 minutes or less
-    elif leader_node == 'short':
-        node_request = ['-We', '0:59']
-
-    # if a single-node was requested, use roslin-runner in singleMachine mode
-    if single_node:
-        batch_system = "singleMachine"
-
-    lsf_proj_name = "{}:{}".format(cmo_project_id, job_uuid)
-    job_name = "leader:{}:{}".format(cmo_project_id, job_uuid)
-    job_desc = job_name
-    output_dir = os.path.join(work_dir, "outputs")
-    input_yaml = "inputs.yaml"
-
-    if pipeline_name_version != None:
-        job_command = "roslin-runner.sh -v {} -w {} -i {} -b {} -p {} -j {} -o {}".format(
-            pipeline_name_version,
-            workflow_name,
-            input_yaml,
-            batch_system,
-            cmo_project_id,
-            job_uuid,
-            output_dir
-        )
-    else:
-        job_command = "roslin-runner.sh -w {} -i {} -b {} -p {} -j {} -o {}".format(
-            workflow_name,
-            input_yaml,
-            batch_system,
-            cmo_project_id,
-            job_uuid,
-            output_dir
-        )
-
-    # add "-r" if restart jobstore uuid is supplied
-    if restart_jobstore_uuid:
-        job_command = job_command + " -r {}".format(restart_jobstore_uuid)
-
-    # add "-d" if debug_mode is turned on
-    if debug_mode:
-        job_command = job_command + " -d"
-
-    bsubline = ["bsub"] + node_request + [
-        "-P", lsf_proj_name,
-        "-J", job_name,
-        "-Jd", job_desc,
-        "-cwd", work_dir,
-        "-oo", "stdout.log",
-        "-eo", "stderr.log",
-        job_command
-    ]
-
-    lsf_job_id = bsub(bsubline)
-
-    return lsf_proj_name, lsf_job_id
-
-
 # fixme: move to common
 def get_current_utc_datetime():
     "return the current UTC date/time"
@@ -229,13 +148,15 @@ def construct_project_metadata(cmo_project_id, cmo_project_path, job_uuid):
     return project
 
 
-def publish_to_redis(cmo_project_id, cmo_project_path, lsf_proj_name, job_uuid):
+def publish_to_redis(cmo_project_id, cmo_project_path, job_uuid):
 
     # fixme: wait until leader job shows up in LSF
     data = construct_project_metadata(cmo_project_id, cmo_project_path, job_uuid)
 
     if not data:
         return
+
+    print("Should publish to redis here...")
 
     # connect to redis
     redis_host = os.environ.get("ROSLIN_REDIS_HOST")
@@ -266,84 +187,15 @@ def read_pipeline_settings(pipeline_name_version):
     return source_env
 
 
-def main():
-    "main function"
-
-    parser = argparse.ArgumentParser(description='submit')
-
-    parser.add_argument(
-        "--id",
-        action="store",
-        dest="cmo_project_id",
-        help="CMO Project ID (e.g. Proj_5088_B)",
-        required=True
-    )
-
-    parser.add_argument(
-        "--path",
-        action="store",
-        dest="cmo_project_path",
-        help="Path to CMO Project (e.g. /ifs/projects/CMO/Proj_5088_B)",
-        required=True
-    )
-
-    parser.add_argument(
-        "--workflow",
-        action="store",
-        dest="workflow_name",
-        help="CWL Workflow name (e.g. project-workflow.cwl)",
-        required=True
-    )
-
-    parser.add_argument(
-        "--pipeline",
-        action="store",
-        dest="pipeline_name_version",
-        help="Pipeline name/version (e.g. variant/2.4.0)",
-        required=True
-    )
-
-    parser.add_argument(
-        "--restart",
-        action="store",
-        dest="restart_jobstore_uuid",
-        help="jobstore uuid for restart",
-        required=False
-    )
-
-    parser.add_argument("--leader-node",
-        action="store",
-        dest="leader_node",
-        choices=['controlR', 'control', 'largeHG', 'short'],
-        default="controlR",
-        help="The LSF node for the leader job. Default: controlR",
-        required=False)
-
-    parser.add_argument(
-        "--single-node",
-        action="store_true",
-        dest="single_node",
-        help="Run the runner in singleMachine mode (Recommend setting --leader-node largeHG)"
-    )
-
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        dest="debug_mode",
-        help="Run the runner in debug mode"
-    )
-
-    params = parser.parse_args()
-
-    # create a new unique job uuid
-    job_uuid = str(uuid.uuid1())
+def init_project(params):
+    # create a new unique job uuid if not supplied
+    params.job_uuid = params.job_uuid if params.job_uuid is not None else str(uuid.uuid1())
 
     # read the Roslin Pipeline settings
     pipeline_settings = read_pipeline_settings(params.pipeline_name_version)
 
     # must be one of the singularity binding points
-    work_base_dir = pipeline_settings["ROSLIN_PIPELINE_OUTPUT_PATH"]
-    work_dir = os.path.join(work_base_dir, job_uuid[:8], job_uuid)
+    work_dir = params.work_dir
 
     # create only if work_dir does not exist
     if not os.path.exists(work_dir):
@@ -370,34 +222,28 @@ def main():
             os.path.join(work_dir, clinical_data_file_name)
         )
 
-
     # convert any relative path in inputs.yaml (e.g. path: ../abc)
     # to absolute path (e.g. path: /ifs/abc)
     convert_examples_to_use_abs_path(
         os.path.join(work_dir, "inputs.yaml")
     )
 
-    # submit
-    lsf_proj_name, lsf_job_id = submit_to_lsf(
-        params.cmo_project_id,
-        job_uuid,
-        work_dir,
-        params.pipeline_name_version,
-        params.leader_node,
-        params.workflow_name,
-        params.restart_jobstore_uuid,
-        params.debug_mode,
-        params.single_node
-    )
+#    publish_to_redis(params.cmo_project_id, params.cmo_project_path, params.job_uuid)
 
-    print(lsf_proj_name)
-    print(lsf_job_id)
-    print(work_dir)
+def main():
+    "main function"
 
-    # fixme: wait till leader job shows up
-    time.sleep(5)
+    parser = argparse.ArgumentParser(description='init_project')
 
-    publish_to_redis(params.cmo_project_id, params.cmo_project_path, lsf_proj_name, job_uuid)
+    parser.add_argument("--id", action="store", dest="cmo_project_id", help="CMO Project ID (e.g. Proj_5088_B)", required=True)
+    parser.add_argument("--path", action="store", dest="cmo_project_path", help="Path to CMO Project (e.g. /ifs/projects/CMO/Proj_5088_B)", required=True)
+    parser.add_argument("--pipeline", action="store", dest="pipeline_name_version", help="Pipeline name/version (e.g. variant/2.4.0)", required=True)
+    parser.add_argument("--job-uuid", action="store", dest="job_uuid", default=None, help="Existing job UUID")
+    parser.add_argument("--work-dir", action="store", dest="work_dir", default=".", help="Working directory for project.")
+
+    params = parser.parse_args()
+
+    init_project(params)
 
 
 if __name__ == "__main__":
