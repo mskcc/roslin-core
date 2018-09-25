@@ -231,6 +231,11 @@ echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAM
 source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/activate
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
+# set PYTHONPATH to use virtualenv 
+export PYTHONPATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/
+# add pipeline scripts to path, which contains roslin-qc scripts (unattached to roslin-qc repo at the moment)
+export PATH=${ROSLIN_PIPELINE_BIN_PATH}/scripts
+
 
 # run cwltoil
 set -o pipefail
