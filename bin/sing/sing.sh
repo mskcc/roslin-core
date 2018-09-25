@@ -29,10 +29,14 @@ EOF
 }
 
 # set up singularity bind paths
-bind_path=""
-for single_bind_path in ${ROSLIN_BIND_PATH}
+bind_bin="${ROSLIN_PIPELINE_BIN_PATH}:${ROSLIN_PIPELINE_BIN_PATH}"
+bind_data="${ROSLIN_PIPELINE_DATA_PATH}:${ROSLIN_PIPELINE_DATA_PATH}"
+bind_input="${ROSLIN_PIPELINE_WORKSPACE_PATH}:${ROSLIN_PIPELINE_WORKSPACE_PATH}"
+bind_output="${ROSLIN_PIPELINE_OUTPUT_PATH}:${ROSLIN_PIPELINE_OUTPUT_PATH}"
+bind_extra=""
+for extra_path in ${ROSLIN_EXTRA_BIND_PATH}
 do
-  bind_path="${bind_path} --bind ${single_bind_path}:${single_bind_path}"
+  bind_extra="${bind_extra} --bind ${extra_path}:${extra_path}"
 done
 
 # path to container images
@@ -59,15 +63,17 @@ shift
 # output metadata (labels) if the inspect option (-i) is supplied
 if [ "$inspect" = "set" ]
 then
-${ROSLIN_SINGULARITY_PATH} exec \
-    --cleanenv \
-    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sqsh \
+  env -i ${ROSLIN_SINGULARITY_PATH} exec \
+    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.img \
     cat /.roslin/labels.json
   exit $?
 fi
 
-# start a singularity container with an empty environment
-${ROSLIN_SINGULARITY_PATH} run \
-  --cleanenv \
-  ${bind_path} \
-  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sqsh $*
+# start a singularity container with an empty environment by runnning with env -i
+env -i ${ROSLIN_SINGULARITY_PATH} run \
+  --bind ${bind_bin} \
+  --bind ${bind_data} \
+  --bind ${bind_input} \
+  --bind ${bind_output} \
+  ${bind_extra} \
+  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.img $*

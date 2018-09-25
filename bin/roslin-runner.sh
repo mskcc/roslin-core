@@ -92,7 +92,8 @@ source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
 
 if [ -z "$ROSLIN_PIPELINE_BIN_PATH" ] || [ -z "$ROSLIN_PIPELINE_DATA_PATH" ] || \
    [ -z "$ROSLIN_PIPELINE_WORKSPACE_PATH" ] || [ -z "$ROSLIN_PIPELINE_OUTPUT_PATH" ] || \
-   [ -z "$ROSLIN_EXTRA_BIND_PATH" ] || [ -z "$ROSLIN_CMO_VERSION" ] || [ -z "$ROSLIN_CMO_INSTALL_PATH" ] || [ -z "$ROSLIN_TOIL_INSTALL_PATH" ]
+   [ -z "$ROSLIN_EXTRA_BIND_PATH" ] || [ -z "$ROSLIN_SINGULARITY_PATH" ] || \
+   [ -z "$ROSLIN_CMO_VERSION" ] || [ -z "$ROSLIN_CMO_INSTALL_PATH" ] || [ -z "$ROSLIN_TOIL_INSTALL_PATH" ]
 then
     echo "Some of the Roslin Pipeline settings are not found."
     echo "ROSLIN_PIPELINE_BIN_PATH=${ROSLIN_PIPELINE_BIN_PATH}"
@@ -100,6 +101,7 @@ then
     echo "ROSLIN_EXTRA_BIND_PATH=${ROSLIN_EXTRA_BIND_PATH}"
     echo "ROSLIN_PIPELINE_WORKSPACE_PATH=${ROSLIN_PIPELINE_WORKSPACE_PATH}"
     echo "ROSLIN_PIPELINE_OUTPUT_PATH=${ROSLIN_PIPELINE_OUTPUT_PATH}"
+    echo "ROSLIN_SINGULARITY_PATH=${ROSLIN_SINGULARITY_PATH}"
     echo "ROSLIN_CMO_VERSION=${ROSLIN_CMO_VERSION}"
     echo "ROSLIN_CMO_INSTALL_PATH=${ROSLIN_CMO_INSTALL_PATH}"
     echo "ROSLIN_TOIL_INSTALL_PATH=${ROSLIN_TOIL_INSTALL_PATH}"
@@ -110,6 +112,16 @@ fi
 # fixme: this is so MSKCC-specific
 leader_node=(luna selene)
 case "${leader_node[@]}" in  *"`hostname -s`"*) leader_node='yes' ;; esac
+
+if [ "$leader_node" != 'yes' ]
+then
+    if [ ! -x "`command -v $ROSLIN_SINGULARITY_PATH`" ]
+    then
+        echo "Unable to find Singularity."
+        echo "ROSLIN_SINGULARITY_PATH=${ROSLIN_SINGULARITY_PATH}"
+        exit 1
+    fi
+fi
 
 if [ ! -d $ROSLIN_CMO_PYTHON_PATH ]
 then
@@ -219,9 +231,6 @@ echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAM
 source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/activate
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
-# set ROSLIN_CMO_PYTHON_PATH to virtualenv location
-export ROSLIN_CMO_PYTHON_PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin
-export PYTHONPATH=$ROSLIN_CMO_PYTHON_PATH
 
 # run cwltoil
 set -o pipefail

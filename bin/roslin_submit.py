@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+import glob
+import subprocess
+import argparse
+import uuid
+import os
 from shutil import copyfile
-import os, sys, glob, uuid, argparse, subprocess
 import hashlib
 import datetime
 import json
@@ -23,27 +26,18 @@ def bsub(bsubline):
     process = subprocess.Popen(bsubline, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = process.stdout.readline()
 
-    # Expected output looks like: Job <26552430> is submitted to queue <controlR>.
-    if re.match(r'Job <\d+> is submitted', output) is not None:
-        lsf_job_id = int(output.strip().split()[1].strip('<>'))
-    else:
-        print("ERROR: Job submission failed", file=sys.stderr)
-        sys.exit(1)
+    # fixme: need better exception handling
+    print output
+    lsf_job_id = int(output.strip().split()[1].strip('<>'))
 
     return lsf_job_id
 
 
-def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, leader_node, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
+def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, leader_queue, workflow_name, restart_jobstore_uuid, debug_mode, single_node):
     "submit roslin-runner to the w node"
 
     batch_system = "lsf"
-    node_request = ['-q', leader_node]
-    # to use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
-    if leader_node == 'largeHG':
-        node_request = ['-M', '512']
-    # to submit short jobs, specify estimated run time as 59 minutes or less
-    elif leader_node == 'short':
-        node_request = ['-We', '0:59']
+    queue_name = leader_queue
 
     # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
@@ -83,7 +77,9 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
     if debug_mode:
         job_command = job_command + " -d"
 
-    bsubline = ["bsub"] + node_request + [
+    bsubline = [
+        "bsub",
+        "-q", queue_name,
         "-P", lsf_proj_name,
         "-J", job_name,
         "-Jd", job_desc,
@@ -283,7 +279,7 @@ def main():
         "--path",
         action="store",
         dest="cmo_project_path",
-        help="Path to CMO Project (e.g. /ifs/projects/CMO/Proj_5088_B)",
+        help="Path to CMO Project (e.g. /ifs/projects/CMO/Proj_5088_B",
         required=True
     )
 
@@ -296,14 +292,6 @@ def main():
     )
 
     parser.add_argument(
-        "--pipeline",
-        action="store",
-        dest="pipeline_name_version",
-        help="Pipeline name/version (e.g. variant/2.4.0)",
-        required=True
-    )
-
-    parser.add_argument(
         "--restart",
         action="store",
         dest="restart_jobstore_uuid",
@@ -311,26 +299,33 @@ def main():
         required=False
     )
 
-    parser.add_argument("--leader-node",
-        action="store",
-        dest="leader_node",
-        choices=['controlR', 'control', 'largeHG', 'short'],
-        default="controlR",
-        help="The LSF node for the leader job. Default: controlR",
-        required=False)
-
-    parser.add_argument(
-        "--single-node",
-        action="store_true",
-        dest="single_node",
-        help="Run the runner in singleMachine mode (Recommend setting --leader-node largeHG)"
-    )
-
     parser.add_argument(
         "--debug",
         action="store_true",
         dest="debug_mode",
         help="Run the runner in debug mode"
+    )
+
+    parser.add_argument("--leader-queue",
+	    action="store",
+	    dest="leader_queue",
+	    default="controlR",
+	    help="The queue to run the leader job",
+	    required=False)
+
+    parser.add_argument(
+        "--single-node",
+        action="store_true",
+        dest="single_node",
+        help="Submit roslin-runner to LSF, but in singleMachine mode"
+    )
+
+    parser.add_argument(
+        "--pipeline",
+        action="store",
+        dest="pipeline_name_version",
+        help="Pipeline name/version (e.g. variant/2.2.0)",
+        required=True
     )
 
     params = parser.parse_args()
@@ -383,16 +378,16 @@ def main():
         job_uuid,
         work_dir,
         params.pipeline_name_version,
-        params.leader_node,
+	params.leader_queue,
         params.workflow_name,
         params.restart_jobstore_uuid,
         params.debug_mode,
         params.single_node
     )
 
-    print(lsf_proj_name)
-    print(lsf_job_id)
-    print(work_dir)
+    print lsf_proj_name
+    print lsf_job_id
+    print work_dir
 
     # fixme: wait till leader job shows up
     time.sleep(5)
