@@ -235,7 +235,7 @@ export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERS
 export PYTHONPATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/
 export ROSLIN_CMO_PYTHON_PATH=$PYTHONPATH
 # add pipeline scripts to path, which contains roslin-qc scripts (unattached to roslin-qc repo at the moment)
-export PATH=${ROSLIN_PIPELINE_BIN_PATH}/scripts
+export PATH=${ROSLIN_PIPELINE_BIN_PATH}/scripts:$PATH
 
 
 # run cwltoil
