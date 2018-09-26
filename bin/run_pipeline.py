@@ -186,17 +186,19 @@ def execute_run_pipeline(params):
     time.sleep(5)
     v_stdout, v_stderr = variant_calling_process.communicate() # wait for variant_calling to finish
     
+    run_filtering = True
     if variant_calling_process.poll() == 1:
-        print("Variant Calling broke; can't do filtering. Check.")
+        print("Variant Calling broke; can't do filtering.")
         print(v_stdout)
         print(v_stderr)
-        sys.exit(1)
+        run_filtering = False
 
     variant_calling_json = variant_calling_process.get_output_json()
     post_variant_calling_path = os.path.join(params.work_dir, "post-variant-calling.yaml")
     post_variant_calling_yaml = json2yaml.create_roslin_yaml(variant_calling_json, post_variant_calling_path,post_alignment_yaml)
 
-    filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
+    if run_filtering:
+        filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
     time.sleep(5)
 
     running_processes.append(filtering_process) 
@@ -219,6 +221,12 @@ def execute_run_pipeline(params):
                         print("SUCCESS: " + cwl_name)
                         successful_processes.add(running_process)
             time.sleep(.5)
+        for process in sucessful_processes:
+            print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+            running_processes.remove(process)
+        for process in failed_processes:
+            print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+            running_processes.remove(process)
         time.sleep(5)
 
     num_success = len(successful_processes)
@@ -229,8 +237,10 @@ def execute_run_pipeline(params):
     print("Num success: %i" % num_success)
     print("Num fail: %i" % num_fail)
 
-    delete_tmp_dirs(successful_processes)
-
+    if num_fail != 0:
+        print("Returning exit code 1 due to failure")
+        sys.exit(1)
+    #delete_tmp_dirs(successful_processes)
 
 if __name__ == "__main__":
     "main function"
