@@ -237,6 +237,12 @@ export ROSLIN_CMO_PYTHON_PATH=$PYTHONPATH
 # add pipeline scripts to path, which contains roslin-qc scripts (unattached to roslin-qc repo at the moment)
 export PATH=${ROSLIN_PIPELINE_BIN_PATH}/scripts:$PATH
 
+echo "Debug info?"
+echo $PYTHONPATH
+echo $PATH
+echo $LD_LIBRARY_PATH
+echo `python -c "import pkg_resources; print(pkg_resources.get_distribution('psutil')); print; print(pkg_resources.get_distribution('cwltool')); print(pkg_resources.get_distribution('toil'));"`
+
 
 # run cwltoil
 set -o pipefail
