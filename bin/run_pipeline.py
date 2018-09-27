@@ -221,7 +221,7 @@ def execute_run_pipeline(params):
                         print("SUCCESS: " + cwl_name)
                         successful_processes.add(running_process)
             time.sleep(.5)
-        for process in sucessful_processes:
+        for process in successful_processes:
             print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
             running_processes.remove(process)
         for process in failed_processes:
