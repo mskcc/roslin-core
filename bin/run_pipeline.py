@@ -222,11 +222,13 @@ def execute_run_pipeline(params):
                         successful_processes.add(running_process)
             time.sleep(.5)
         for process in successful_processes:
-            print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
-            running_processes.remove(process)
+            if process in running_processes:
+                print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+                running_processes.remove(process)
         for process in failed_processes:
-            print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
-            running_processes.remove(process)
+            if process in running_processes:
+                print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+                running_processes.remove(process)
         time.sleep(5)
 
     num_success = len(successful_processes)
