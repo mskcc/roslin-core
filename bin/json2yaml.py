@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+# Allan wrote this
  
 import argparse
 import simplejson
@@ -14,10 +16,26 @@ def merge(yaml1, yaml2):
                 yaml1[k] = merge(yaml1[k],v)
     return yaml1
 
-def create_roslin_yaml(input_file, output_file, original_yaml_file):
+# this is very specific to our output-meta-json, which has random debug information from toil.common... we can technically disable that, but I don't know how
+def extract_json_from_file(input_file):
     f = open(input_file, 'rb')
+    running_string = ""
+    active = False
+    for line in f:
+        if line[0] == "{":
+            active = True
+        elif line[0] == "}":
+            active = False
+            running_string += "}"
+        if active:
+            running_string += line
+    return running_string
+
+def create_roslin_yaml(input_file, output_file, original_yaml_file):
+
     outfile = open(output_file, 'wb')
-    data = simplejson.loads(str(f.read()))
+    json_string = extract_json_from_file(input_file)
+    data = simplejson.loads(str(json_string))
     
     s = yaml.dump(data, default_flow_style=False) 
 

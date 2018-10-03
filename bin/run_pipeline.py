@@ -64,7 +64,7 @@ class WorkflowJob:
             job_command = job_command + " -d"
     
         return job_command 
-    
+ 
     def run_workflow(self):
         job_command = self.build_workflow_command()
         # TODO: add check if this workflow was previously completed; if complete, return 0    
@@ -73,6 +73,11 @@ class WorkflowJob:
         print("Output directory: %s" % self.output_dir)
         print("Running command %s" % job_command)
         self.process_run = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def already_exist(self):
+        if len(self.get_tmp_directories()) == 0:
+            return True
+        return False
 
     def communicate(self):
         print("Waiting for %s to complete..." % self.workflow_name)
@@ -83,7 +88,10 @@ class WorkflowJob:
         return self.process_run.poll()
 
     def get_tmp_directories(self):
-        return glob.glob(self.output_dir + os.sep + "tmp*")
+        tmp_dirs = glob.glob(self.output_dir + os.sep + "tmp*")
+        out_tmp_dirs =  glob.glob(self.output_dir + os.sep + "out_tmpdir*")
+        result = tmp_dirs + out_tmp_dirs
+        return result
 
     def get_output_json(self):
         return self.output_meta_json
@@ -103,7 +111,6 @@ def submit_process(params, input_yaml_file, workflow_name, output_dir_name):
     workflow_job = WorkflowJob(project_id, job_uuid, pipeline_name_version, batch_system, restart_jobstore_uuid, debug_mode, output_dir, work_dir, workflow_name, input_yaml_file)
     workflow_job.run_workflow()
     return workflow_job
-    
 
 def delete_tmp_dirs(workflow_jobs):
     for workflow_job in workflow_jobs:
@@ -145,11 +152,13 @@ def execute_run_pipeline(params):
 
     # Prototyping this for now
     alignment_process = submit_process(params, input_yaml, "alignment.cwl", "alignment")
-    alignment_process.communicate() #wait for alignment to complete
+    a_stdout, a_stderr = alignment_process.communicate() #wait for alignment to complete
     running_processes = [ alignment_process ]
 
     if alignment_process.poll() == 1:
         print("Alignment broke; exiting")
+        print(a_stdout)
+        print(a_stderr)
         sys.exit(1)
 
     print("Alignment done.")
@@ -160,7 +169,9 @@ def execute_run_pipeline(params):
     post_alignment_yaml = json2yaml.create_roslin_yaml(alignment_json, post_alignment_path, input_yaml)
 
     gather_metrics_process = submit_process(params, post_alignment_yaml, "gather_metrics.cwl", "gather_metrics")
+    time.sleep(5)
     conpair_process = submit_process(params, post_alignment_yaml, "conpair.cwl", "conpair")
+    time.sleep(5)
 
     running_processes.append(gather_metrics_process)
     running_processes.append(conpair_process)
@@ -169,19 +180,26 @@ def execute_run_pipeline(params):
     if find_sv:
         find_svs_process = submit_process(params, post_alignment_yaml, "find_svs.cwl", "find_svs")
         running_processes.append(find_svs_process)
+    time.sleep(5)
 
     variant_calling_process = submit_process(params, post_alignment_yaml, "variant_calling.cwl","variant_calling")
-    variant_calling_process.communicate() # wait for variant_calling to finish
+    time.sleep(5)
+    v_stdout, v_stderr = variant_calling_process.communicate() # wait for variant_calling to finish
     
+    run_filtering = True
     if variant_calling_process.poll() == 1:
-        print("Variant Calling broke; can't do filtering. Check.")
-        sys.exit(1)
+        print("Variant Calling broke; can't do filtering.")
+        print(v_stdout)
+        print(v_stderr)
+        run_filtering = False
 
     variant_calling_json = variant_calling_process.get_output_json()
     post_variant_calling_path = os.path.join(params.work_dir, "post-variant-calling.yaml")
     post_variant_calling_yaml = json2yaml.create_roslin_yaml(variant_calling_json, post_variant_calling_path,post_alignment_yaml)
 
-    filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
+    if run_filtering:
+        filtering_process = submit_process(params, post_variant_calling_yaml, "filtering.cwl", "filtering")
+    time.sleep(5)
 
     running_processes.append(filtering_process) 
     
@@ -203,6 +221,14 @@ def execute_run_pipeline(params):
                         print("SUCCESS: " + cwl_name)
                         successful_processes.add(running_process)
             time.sleep(.5)
+        for process in successful_processes:
+            if process in running_processes:
+                print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+                running_processes.remove(process)
+        for process in failed_processes:
+            if process in running_processes:
+                print("Removing %s from set so that it's no longer being polled..." % process.workflow_name)
+                running_processes.remove(process)
         time.sleep(5)
 
     num_success = len(successful_processes)
@@ -213,8 +239,10 @@ def execute_run_pipeline(params):
     print("Num success: %i" % num_success)
     print("Num fail: %i" % num_fail)
 
-    delete_tmp_dirs(successful_processes)
-
+    if num_fail != 0:
+        print("Returning exit code 1 due to failure")
+        sys.exit(1)
+    #delete_tmp_dirs(successful_processes)
 
 if __name__ == "__main__":
     "main function"
