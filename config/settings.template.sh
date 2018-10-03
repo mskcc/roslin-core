@@ -15,3 +15,5 @@ ROSLIN_CORE_SCHEMA_PATH="${ROSLIN_CORE_PATH}/schemas"
 
 export ROSLIN_REDIS_HOST="{{ core_redis_host }}"
 export ROSLIN_REDIS_PORT="{{ core_redist_port}}"
+
+export PATH=$ROSLIN_CORE_BIN_PATH:$PATH
