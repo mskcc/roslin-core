@@ -77,18 +77,17 @@ EOF
 # ::TODO:: This causes cmo_facets to return exitcode 0 always, but we need to fix FACETS itself.
 export FACETS_OVERRIDE_EXITCODE="set"
 
-if [ -z "$language_name" ]
+if [ -n "$language_name" ]
 then
-    echo "No language name defined"
-    usage
-    exit 1
+
+    if [ -z "$language_version" ]
+    then
+        echo "No language version defined for ${language_name}"
+        usage
+        exit 1
+    fi
 fi
-if [ -z "$language_version" ]
-then
-    echo "No language version defined"
-    usage
-    exit 1
-fi
+
 if [ -z "$tool_name" ]
 then
     echo "No tool defined"
@@ -101,13 +100,16 @@ then
     usage
     exit 1
 fi
-language_path="cat $CMO_RESOURCE_CONFIG | jq '.[\"programs\"][\"${language_name}\"][\"${language_version}\"]'"
 tool_path="cat $CMO_RESOURCE_CONFIG | jq '.[\"programs\"][\"${tool_name}\"][\"${tool_version}\"]'"
-# Get the tool and python command from the resource.json and also allow spaces in the commands
-language_cmd=$(eval $language_path)
-language_cmd="${language_cmd:1:${#language_cmd}-2}"
 tool_cmd=$(eval $tool_path)
 tool_cmd="${tool_cmd:1:${#tool_cmd}-2}"
+# Get the tool and python command from the resource.json and also allow spaces in the commands
+if [ -n "$language_name" ]
+then
+    language_path="cat $CMO_RESOURCE_CONFIG | jq '.[\"programs\"][\"${language_name}\"][\"${language_version}\"]'"
+    language_cmd=$(eval $language_path)
+    language_cmd="${language_cmd:1:${#language_cmd}-2}"
+fi
 case "$tool_cmd" in
     *sing.sh*) eval "${tool_cmd} ${command} ${tool_opts[*]}" ;;
     *) eval "$language_cmd ${tool_cmd} ${command} ${tool_opts[*]}" ;;
