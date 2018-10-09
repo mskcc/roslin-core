@@ -227,8 +227,6 @@ jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/jobstore-${job_store_uuid}"
 printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
 
 echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAME}-${ROSLIN_PIPELINE_VERSION}, cmo-${ROSLIN_CMO_VERSION}"
-# Load the virtualenv
-source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/activate
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
