@@ -61,7 +61,7 @@ if [ "$inspect" = "set" ]
 then
 ${ROSLIN_SINGULARITY_PATH} exec \
     --cleanenv \
-    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sqsh \
+    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif \
     cat /.roslin/labels.json
   exit $?
 fi
@@ -70,4 +70,4 @@ fi
 ${ROSLIN_SINGULARITY_PATH} run \
   --cleanenv \
   ${bind_path} \
-  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sqsh $*
+  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif $*
