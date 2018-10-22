@@ -17,3 +17,5 @@ export ROSLIN_REDIS_HOST="{{ core_redis_host }}"
 export ROSLIN_REDIS_PORT="{{ core_redist_port}}"
 
 export PATH=$ROSLIN_CORE_BIN_PATH:$PATH
+
+echo "Loaded Roslin Core Version ( $ROSLIN_CORE_VERSION )"
