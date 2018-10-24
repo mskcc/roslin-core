@@ -100,15 +100,14 @@ then
     usage
     exit 1
 fi
-tool_path="cat $CMO_RESOURCE_CONFIG | jq '.[\"programs\"][\"${tool_name}\"][\"${tool_version}\"]'"
+tool_path="cat $CMO_RESOURCE_CONFIG | python -c 'import sys, json; print json.load(sys.stdin)[\"programs\"][\"${tool_name}\"][\"${tool_version}\"]'"
 tool_cmd=$(eval $tool_path)
-tool_cmd="${tool_cmd:1:${#tool_cmd}-2}"
+
 # Get the tool and python command from the resource.json and also allow spaces in the commands
 if [ -n "$language_name" ]
 then
-    language_path="cat $CMO_RESOURCE_CONFIG | jq '.[\"programs\"][\"${language_name}\"][\"${language_version}\"]'"
+    language_path="cat $CMO_RESOURCE_CONFIG | python -c 'import sys, json; print json.load(sys.stdin)[\"programs\"][\"${language_name}\"][\"${language_version}\"]'"
     language_cmd=$(eval $language_path)
-    language_cmd="${language_cmd:1:${#language_cmd}-2}"
 fi
 case "$tool_cmd" in
     *sing.sh*) eval "${tool_cmd} ${command} ${tool_opts[*]}" ;;
