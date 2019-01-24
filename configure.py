@@ -36,8 +36,11 @@ def configure_setup_settings(settings):
     content = template.render(
         core_version=settings["version"],
         roslin_root=settings["ROSLIN_CORE_ROOT"],
-        core_redis_host=settings["redis"]["host"],
-        core_redist_port=settings["redis"]["port"]        
+        core_mongo_host=settings["mongo"]["host"],
+        core_mongo_port=settings["mongo"]["port"],
+        core_mongo_database=settings["mongo"]["database"],
+        core_mongo_username=settings["mongo"]["username"],
+        core_mongo_password=settings["mongo"]["password"]
     )
 
     write_to_disk("config/settings.sh", content)

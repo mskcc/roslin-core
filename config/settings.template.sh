@@ -13,8 +13,11 @@ export ROSLIN_CORE_CONFIG_PATH="${ROSLIN_CORE_PATH}/config"
 
 ROSLIN_CORE_SCHEMA_PATH="${ROSLIN_CORE_PATH}/schemas"
 
-export ROSLIN_REDIS_HOST="{{ core_redis_host }}"
-export ROSLIN_REDIS_PORT="{{ core_redist_port}}"
+export ROSLIN_MONGO_HOST="{{ core_mongo_host }}"
+export ROSLIN_MONGO_PORT="{{ core_mongo_port }}"
+export ROSLIN_MONGO_DATABASE="{{ core_mongo_database }}"
+export ROSLIN_MONGO_USERNAME="{{ core_mongo_username }}"
+export ROSLIN_MONGO_PASSWORD="{{ core_mongo_password }}"
 
 export PATH=$ROSLIN_CORE_BIN_PATH:$PATH
 
