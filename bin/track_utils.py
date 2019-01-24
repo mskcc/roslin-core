@@ -38,8 +38,19 @@ termination_file_name = "killed-by-user.json"
 submission_file_name = "submitted-by-user.json"
 old_jobs_folder = "oldJobs"
 DOC_VERSION = "1.0.0"
-MONGO_URL = 'mongodb://localhost:27017'
-MONGO_DATABASE = "pi_workflows"
+MONGO_HOST = os.environ['ROSLIN_MONGO_HOST']
+MONGO_PORT = os.environ['ROSLIN_MONGO_PORT']
+MONGO_DATABASE = os.environ['ROSLIN_MONGO_DATABASE']
+MONGO_USERNAME = os.environ['ROSLIN_MONGO_USERNAME']
+MONGO_PASSWORD = os.environ['ROSLIN_MONGO_PASSWORD']
+mongo_username_and_password = ''
+if MONGO_USERNAME:
+	mongo_username_and_password = str(MONGO_USERNAME)
+if MONGO_PASSWORD:
+	mongo_username_and_password = mongo_username_and_password + ":" + str(MONGO_PASSWORD)
+if mongo_username_and_password:
+	mongo_username_and_password = mongo_username_and_password + "@"
+MONGO_URL = 'mongodb://' + mongo_username_and_password + str(MONGO_HOST) + ':' + str(MONGO_PORT)
 index_key = 'pipelineJobId'
 RUN_RESULTS_COLLECTION = "RunResults"
 PROJECTS_COLLECTION = "Projects"
