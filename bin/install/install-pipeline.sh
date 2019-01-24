@@ -123,6 +123,7 @@ md5sum -c checksum.dat
 cp -R ${install_temp_path}/setup/cwl/* ${ROSLIN_PIPELINE_BIN_PATH}/cwl/
 
 # copy pipeline scripts
+cp ${install_temp_path}/setup/bin/roslin_workflows.py ${ROSLIN_PIPELINE_BIN_PATH}
 cp -R ${install_temp_path}/setup/bin/* ${ROSLIN_PIPELINE_BIN_PATH}/scripts/
 
 # check md5 checksum
