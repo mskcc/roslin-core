@@ -54,7 +54,7 @@ EXAMPLE:
 EOF
 }
 
-while getopts “v:w:i:b:o:r:zdp:j:” OPTION
+while getopts “v:w:i:b:o:j:d:rzdp:u:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
@@ -62,14 +62,16 @@ do
         i) input_filename=$OPTARG ;;
         b) batch_system=$OPTARG ;;
         o) output_directory=$OPTARG ;;
-        r) restart_jobstore_id=$OPTARG; restart_options="--restart" ;;
-       	z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
+        j) JOBSTORE_ID=$OPTARG ;;
+        d) work_dir=$OPTARG ;;
+        r) restart_options="--restart" ;;
+        z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
         d) debug_options="--logDebug --cleanWorkDir never" ;;
-        p) CMO_PROJECT_ID=$OPTARG ;;
-        j) JOB_UUID=$OPTARG ;;
+        p) PROJECT_ID=$OPTARG ;;
+        u) JOB_UUID=$OPTARG ;;
         *) usage; exit 1 ;;
     esac
 done
@@ -142,27 +144,7 @@ then
 fi
 
 # handle batch system options
-case $batch_system in
-
-    singleMachine)
-        batch_sys_options="--batchSystem singleMachine"
-        ;;
-
-    lsf)
-        batch_sys_options="--batchSystem lsf --stats"
-        ;;
-
-    mesos)
-        echo "Unsupported right now."
-        exit 1
-        ;;
-
-    *)
-        usage
-        exit 1
-        ;;
-esac
-
+batch_sys_options="--batchSystem ${batch_system}"
 
 # get absolute path for output directory
 output_directory=`python -c "import os;print(os.path.abspath('${output_directory}'))"`
@@ -177,6 +159,9 @@ fi
 
 # create output directory
 mkdir -p ${output_directory}
+
+# create work directory
+mkdir -p ${work_dir}
 
 # create log directory (under output)
 mkdir -p ${output_directory}/log
@@ -193,24 +178,25 @@ else
     job_uuid=${JOB_UUID}
 fi
 
-if [ -z "${CMO_PROJECT_ID}" ]
+if [ -z "${JOBSTORE_ID}" ]
 then
-    cmo_project_id="default"
+    # create a new UUID for job
+    job_store_uuid=`python -c 'import uuid; print str(uuid.uuid1())'`
 else
-    cmo_project_id="${CMO_PROJECT_ID}"
+    # use the supplied one
+    job_store_uuid=${JOBSTORE_ID}
+fi
+
+if [ -z "${PROJECT_ID}" ]
+then
+    project_id="default"
+else
+    project_id="${PROJECT_ID}"
 fi
 
 # MSKCC LSF+TOIL
-export TOIL_LSF_PROJECT="${cmo_project_id}:${job_uuid}"
-
-if [ -z "$restart_jobstore_id" ]
-then
-    # create a new UUID for job store
-    job_store_uuid=`python -c 'import uuid; print str(uuid.uuid1())'`
-else
-    # we're doing a restart - use the supplied jobstore uuid
-    job_store_uuid=${restart_jobstore_id}
-fi
+export TOIL_LSF_PROJECT="${job_uuid}"
+job_store_uuid=${JOBSTORE_ID}
 
 # save job uuid
 echo "${job_uuid}" > ${output_directory}/job-uuid
@@ -221,7 +207,8 @@ echo "${job_store_uuid}" > ${output_directory}/job-store-uuid
 # save the Roslin Pipeline settings.sh
 cp ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh ${output_directory}/settings
 
-jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/jobstore-${job_store_uuid}"
+jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/${job_store_uuid}"
+echo "${jobstore_path}"
 
 # job uuid followed by a colon (:) and then job store uuid
 printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
@@ -235,21 +222,22 @@ set -o pipefail
 cwltoil \
     ${restart_options} \
     --jobStore file://${jobstore_path} \
+    --retryCount 1 \
     --defaultDisk 24G \
     --defaultMemory 48G \
     --defaultCores 1 \
     --maxDisk 128G \
     --maxMemory 256G \
     --maxCores 14 \
-    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG \
+    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG TMP TMPDIR \
     --no-container \
     --not-strict \
     --disableCaching \
     --realTimeLogging \
     --maxLogFileSize 0 \
-    --writeLogs	${output_directory}/log \
+    --writeLogs ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
-    --workDir ${ROSLIN_PIPELINE_BIN_PATH}/tmp \
+    --workDir ${work_dir} \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
     ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
     ${input_filename} \
