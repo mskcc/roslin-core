@@ -110,7 +110,9 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     current_time = get_current_time()
     with open(inputs_yaml) as input_yaml_file:
         input_yaml_data = safe_load(input_yaml_file)
-    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data}
+    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"output_dir":roslin_output_path}
+    with open("submission.json","w") as submission_file:
+        json.dump(submission_dict,submission_file)
     if not restart:
         project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart)
         run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
