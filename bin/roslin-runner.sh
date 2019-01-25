@@ -92,6 +92,12 @@ fi
 # load pipeline settings
 source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
 
+if [ ! -z $TMPDIR_TEST ]
+then
+    export TMP=$TMPDIR_TEST
+    export TMPDIR=$TMPDIR_TEST
+fi
+
 if [ -z "$ROSLIN_PIPELINE_BIN_PATH" ] || [ -z "$ROSLIN_PIPELINE_DATA_PATH" ] || \
    [ -z "$ROSLIN_PIPELINE_WORKSPACE_PATH" ] || [ -z "$ROSLIN_PIPELINE_OUTPUT_PATH" ] || \
    [ -z "$ROSLIN_EXTRA_BIND_PATH" ] || [ -z "$ROSLIN_SINGULARITY_PATH" ] || \
