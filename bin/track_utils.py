@@ -23,7 +23,7 @@ import copy
 from subprocess import PIPE, Popen
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path
+from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty
 import dill
 import simplejson
 import sys
@@ -44,9 +44,9 @@ MONGO_DATABASE = os.environ['ROSLIN_MONGO_DATABASE']
 MONGO_USERNAME = os.environ['ROSLIN_MONGO_USERNAME']
 MONGO_PASSWORD = os.environ['ROSLIN_MONGO_PASSWORD']
 mongo_username_and_password = ''
-if MONGO_USERNAME:
+if check_if_env_is_empty(MONGO_USERNAME):
 	mongo_username_and_password = str(MONGO_USERNAME)
-if MONGO_PASSWORD:
+if check_if_env_is_empty(MONGO_PASSWORD):
 	mongo_username_and_password = mongo_username_and_password + ":" + str(MONGO_PASSWORD)
 if mongo_username_and_password:
 	mongo_username_and_password = mongo_username_and_password + "@"
