@@ -196,7 +196,7 @@ def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_ve
         save_json(user_log_path,user_termination_json)
         kill_project(project_name,project_uuid,work_dir,batch_system,user_termination_json,tmp_path,termination_graceful)
 
-'''def merge(yaml1, yaml2):
+def merge(yaml1, yaml2):
     if not yaml1 and yaml2:
         return yaml2
 
@@ -211,31 +211,31 @@ def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_ve
                 merged_yaml[k] = v
             else:
                 merged_yaml[k] = merge(merged_yaml[k],v)
-    return merged_yaml'''
+    return merged_yaml
 
 def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
     import ruamel.yaml as yaml
 
     result = None
 
-    yaml_data = []
+    #yaml_data = []
 
     for single_output_meta_file in output_meta_list:
         if single_output_meta_file:
             with open(single_output_meta_file,'r') as output_meta_file:
                 yaml_contents = yaml.safe_load(output_meta_file)
-                yaml_data.append(yaml_contents)
-                #result = merge(result,yaml_contents)
+                #yaml_data.append(yaml_contents)
+                result = merge(result,yaml_contents)
 
     for single_yaml_file in yaml_file_list:
         if single_yaml_file:
             with open(single_yaml_file,'r') as single_yaml:
                 yaml_contents = yaml.safe_load(single_yaml)
-                yaml_data.append(yaml_contents)
-                #result = merge(result, yaml_contents)
+                #yaml_data.append(yaml_contents)
+                result = merge(result, yaml_contents)
 
     with open(yaml_location, 'w') as outfile:
-        yaml.dump_all(yaml_data, outfile,  default_flow_style=False)
+        yaml.dump(result, outfile,  default_flow_style=False)
 
 def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
 
