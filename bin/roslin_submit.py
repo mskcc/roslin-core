@@ -41,7 +41,7 @@ def cleanup(clean_up_tuple, signal_num, frame):
     send_user_kill_signal(*clean_up_tuple)
 
 def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict):
-    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart
+    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, construct_run_data_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
     roslin_bin_path = pipeline_settings['ROSLIN_PIPELINE_BIN_PATH']
@@ -114,8 +114,10 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     if not restart:
         project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart)
         run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
+        run_data_doc = construct_run_data_doc(project_uuid, jobstore_uuid, pipeline_version, project_id)
         update_project_doc(logger,project_uuid,project_doc)
         update_run_result_doc(logger,project_uuid,run_results_doc)
+        update_run_data_doc(logger,project_uuid,run_data_doc)
         update_latest_project(logger,project_uuid,project_id)
         user_event_name = "submit"
     else:

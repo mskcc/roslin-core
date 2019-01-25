@@ -55,6 +55,7 @@ index_key = 'pipelineJobId'
 RUN_RESULTS_COLLECTION = "RunResults"
 PROJECTS_COLLECTION = "Projects"
 RUN_PROFILES_COLLECTION = "RunProfiles"
+RUN_DATA_COLLECTION = "RunData"
 client = MongoClient(MONGO_URL, connect=False)
 
 ### mongo wrappers ###
@@ -265,6 +266,7 @@ def track_job_helper(track_job_flag,params,job_params,restart,logger):
 
 def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
+	run_data_doc = get_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid)
 	for single_job_key in status_change:
 		single_job_obj = status_change[single_job_key]['job_obj']
 		single_tool_status = single_job_obj['single_tool_status']
@@ -273,8 +275,11 @@ def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
 		status = single_job_obj['status']
 		tool_status = job_dict[job_name]
 		job_id, job_doc = construct_job_doc(tool_status,job_name,job_id,status)
+		job_info = job_doc.pop("jobInfo")
+		run_data_doc['jobData'][job_id] = job_info
 		run_result_doc['batchSystemJobs'][job_id] = job_doc
 	run_result_doc['timestamp']['lastUpdated'] = get_current_time()
+	update_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid,run_data_doc)
 	update_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid,run_result_doc)
 
 def update_workflow_run_results(logger,project_uuid,workflow_jobs_dict):
@@ -300,6 +305,9 @@ def update_run_result_doc(logger,project_uuid,run_result_doc):
 
 def update_project_doc(logger,project_uuid,project_doc):
 	update_mongo_document(logger,PROJECTS_COLLECTION,project_uuid,project_doc)
+
+def update_run_data_doc(logger,project_uuid,run_data_doc):
+	update_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid,run_data_doc)
 
 def update_run_results_status(logger,project_uuid,status):
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
@@ -420,6 +428,16 @@ def construct_run_results_doc(pipeline_name, pipeline_version, project_id, proje
 
 	return run_result
 
+def construct_run_data_doc(job_uuid,jobstore_uuid,pipeline_version,project_id):
+	run_data = {
+		"docVersion": DOC_VERSION,
+		"pipelineJobId":job_uuid,
+		"pipelineJobStoreId":jobstore_uuid,
+		"pipelineVersion": pipeline_version,
+		"projectId": project_id,
+		"jobData": {}
+	}
+	return run_data
 
 def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow, input_files, restart):
 
