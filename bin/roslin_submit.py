@@ -14,6 +14,8 @@ import logging
 import signal
 import shutil
 from functools import partial
+import socket
+import getpass
 
 if 'ROSLIN_CORE_BIN_PATH' not in os.environ:
     print("Roslin core settings not loaded")
@@ -103,8 +105,8 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
         log_path_stdout = os.path.join(log_folder,log_stdout)
         log_path_stderr = os.path.join(log_folder,log_stderr)
     cwltoil_log_path = os.path.join(log_folder,'cwltoil.log')
-    user = os.environ['USER']
-    hostname = os.environ['HOSTNAME']
+    user = getpass.getuser()
+    hostname = socket.gethostname()
     current_time = get_current_time()
     with open(inputs_yaml) as input_yaml_file:
         input_yaml_data = safe_load(input_yaml_file)

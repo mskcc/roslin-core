@@ -8,6 +8,8 @@ import logging
 import json
 import shlex
 import signal
+import socket
+import getpass
 
 
 def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
@@ -120,7 +122,7 @@ def kill_all_lsf_jobs(logger, uuid):
 
 def kill_project(project_name, project_uuid, work_dir, batch_system, user_termination_dict,tmp_path,termination_graceful):
     from track_utils import  update_run_results_status, get_status_names, add_user_event
-    current_user = os.environ['USER']
+    current_user = getpass.getuser()
     status_names = get_status_names()
     project_pid = get_pid(work_dir)
     if project_pid:
@@ -168,8 +170,8 @@ def save_json(json_path,json_data):
 def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version, termination_graceful):
     log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
     from track_utils import get_current_time, termination_file_name, submission_file_name
-    current_user = os.environ['USER']
-    current_hostname = os.environ['HOSTNAME']
+    current_user = getpass.getuser()
+    current_hostname = socket.gethostname()
     user_termination_json = {'user':current_user,'hostname':current_hostname,'time':get_current_time(),'exit_graceful':termination_graceful,'error_message':None}
     user_log_path = os.path.join(log_dir,termination_file_name)
     user_submission_path = os.path.join(log_dir,submission_file_name)
