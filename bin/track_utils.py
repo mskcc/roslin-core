@@ -746,6 +746,8 @@ class RoslinWorkflow():
 		"-o",job_output_dir]
 		if job_restart:
 			roslin_runner_command.extend(["-r"])
+		if debug_mode:
+			roslin_runner_command.extend(["-d"])
 		if not os.path.exists(log_folder):
 			os.mkdir(log_folder)
 		log_stdout = job_name + "-stdout.log"
