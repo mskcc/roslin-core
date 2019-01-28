@@ -16,7 +16,9 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
     pre_exec_fn = None
     if real_time:
         pre_exec_fn = os.setsid
-    single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell, preexec_fn=pre_exec_fn)
+        single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell, preexec_fn=pre_exec_fn)
+    else:
+        single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell)
     output = None
     error = None
     errorcode = None
