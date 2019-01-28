@@ -34,27 +34,25 @@ OPTIONS:
    -v      Pipeline name/version (default=${pipeline_name_version})
    -w      Workflow filename (*.cwl)
    -i      Input filename (*.yaml)
-   -b      Batch system ("singleMachine", "lsf", "mesos")
+   -b      Batch system (e.g. "singleMachine", "lsf", "mesos")
    -o      Output directory (default=${output_directory})
+   -j      Jobstore UUID
+   -u      Job UUID
+   -k      Toil work directory location
    -r      Restart the workflow with the given job store UUID
+   -t      Run pipeline in test mode
    -z      Show list of supported workflows
-   -d      Enable debugging (default="enabled")
-           fixme: you are not allowed to disable this right now
-
-OPTIONS for MSKCC LSF+TOIL:
-
-   -p      CMO Project ID (e.g. Proj_5088_B)
-   -j      Pre-generated job UUID
+   -d      Enable debugging
 
 EXAMPLE:
 
-   `basename $0` -v variant/1.0.0 -w module-1.cwl -i inputs.yaml -b lsf
-   `basename $0` -v rna-seq/1.0.0 -w tophat.cwl -i inputs.yaml -b singleMachine
+   `basename $0` -v variant/2.5.0 -w module-1.cwl -i inputs.yaml -k /scratch -j [uuid1] -u [uuid2] -b lsf
+   `basename $0` -v rna-seq/1.0.0 -w hisat2.cwl -i inputs.yaml -k /scratch -j [uuid1] -u [uuid2] -b singleMachine
 
 EOF
 }
 
-while getopts “v:w:i:b:o:j:d:rzdp:u:” OPTION
+while getopts “v:w:i:b:o:j:d:rzd:u:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
@@ -63,14 +61,14 @@ do
         b) batch_system=$OPTARG ;;
         o) output_directory=$OPTARG ;;
         j) JOBSTORE_ID=$OPTARG ;;
-        d) work_dir=$OPTARG ;;
+        k) work_dir=$OPTARG ;;
         r) restart_options="--restart" ;;
+        t) test_mode="True" ;;
         z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
         d) debug_options="--logDebug --cleanWorkDir never" ;;
-        p) PROJECT_ID=$OPTARG ;;
         u) JOB_UUID=$OPTARG ;;
         *) usage; exit 1 ;;
     esac
@@ -92,10 +90,11 @@ fi
 # load pipeline settings
 source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
 
-if [ ! -z $TMPDIR_TEST ]
+if [ ! -z $test_mode ]
 then
-    export TMP=$TMPDIR_TEST
-    export TMPDIR=$TMPDIR_TEST
+    echo "Running in test mode"
+    source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/test-settings.sh
+
 fi
 
 if [ -z "$ROSLIN_PIPELINE_BIN_PATH" ] || [ -z "$ROSLIN_PIPELINE_DATA_PATH" ] || \
@@ -193,14 +192,7 @@ else
     job_store_uuid=${JOBSTORE_ID}
 fi
 
-if [ -z "${PROJECT_ID}" ]
-then
-    project_id="default"
-else
-    project_id="${PROJECT_ID}"
-fi
-
-# MSKCC LSF+TOIL
+# LSF+TOIL
 export TOIL_LSF_PROJECT="${job_uuid}"
 job_store_uuid=${JOBSTORE_ID}
 
@@ -239,6 +231,7 @@ cwltoil \
     --no-container \
     --not-strict \
     --disableCaching \
+    --cleanWorkDir never \
     --realTimeLogging \
     --maxLogFileSize 0 \
     --writeLogs ${output_directory}/log \
