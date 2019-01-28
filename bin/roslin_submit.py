@@ -40,7 +40,7 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict):
+def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, construct_run_data_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
@@ -89,7 +89,9 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     if cwl_batch_system:
         roslin_leader_command.extend(["--cwl-batch-system",cwl_batch_system])
     if debug_mode:
-        roslin_leader_command.append('--debug_mode')
+        roslin_leader_command.append('--debug-mode')
+    if test_mode:
+        roslin_leader_command.append('--test-mode')
     for single_requirement_key in requirements_dict:
         requirement_value, requirement_option = requirements_dict[single_requirement_key]
         roslin_leader_command.extend([requirement_option,requirement_value])
@@ -101,7 +103,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     roslin_leader_command.append(leader_job_store_path)
     log_path_stdout = None
     log_path_stderr = None
-    if foreground_mode:
+    if not foreground_mode:
         log_path_stdout = os.path.join(log_folder,log_stdout)
         log_path_stderr = os.path.join(log_folder,log_stderr)
     cwltoil_log_path = os.path.join(log_folder,'cwltoil.log')
@@ -110,7 +112,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     current_time = get_current_time()
     with open(inputs_yaml) as input_yaml_file:
         input_yaml_data = safe_load(input_yaml_file)
-    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"output_dir":roslin_output_path}
+    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"output_dir":roslin_output_path,"project_id":project_id,"project_uuid":project_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version}
     with open("submission.json","w") as submission_file:
         json.dump(submission_dict,submission_file)
     if not restart:
@@ -139,7 +141,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
         exit_code = command_output['errorcode']
         exit(exit_code)
     else:
-        leader_process = run_command(roslin_leader_command,None,None,False,False)
+        leader_process = run_command(roslin_leader_command,log_path_stdout,log_path_stderr,False,False)
         print(running_command_str)
 
 def generate_sha1(filename):
@@ -366,6 +368,13 @@ def main():
     )
 
     parser.add_argument(
+        "--test-mode",
+        action="store_true",
+        dest="test_mode",
+        help="Run the runner in test mode"
+    )
+
+    parser.add_argument(
         "--foreground-mode",
         action="store_true",
         dest="foreground_mode",
@@ -473,7 +482,7 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict)
+    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode)
 
 if __name__ == "__main__":
 

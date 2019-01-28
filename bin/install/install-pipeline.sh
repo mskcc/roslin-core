@@ -68,6 +68,7 @@ fi
 # copy the Roslin Pipeline settings.sh to Roslin Core config directory
 mkdir -p ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}
 cp ${install_temp_path}/setup/config/settings.sh ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}
+cp ${install_temp_path}/setup/config/test-settings.sh ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}
 
 echo
 echo "roslin-${ROSLIN_PIPELINE_NAME}-pipeline-${ROSLIN_PIPELINE_VERSION}"

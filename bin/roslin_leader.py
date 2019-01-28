@@ -179,10 +179,16 @@ if __name__ == "__main__":
         required=True
     )
     parser_project_options.add_argument(
-        "--debug_mode",
+        "--debug-mode",
         action="store_true",
         dest="debug_mode",
         help="Run the runner in debug mode"
+    )
+    parser_project_options.add_argument(
+        "--test-mode",
+        action="store_true",
+        dest="test_mode",
+        help="Run the runner in test mode"
     )
     parser_project_options.add_argument(
         "--uuid",
@@ -361,7 +367,7 @@ if __name__ == "__main__":
         cwl_batch_system = options.batch_system
     with Toil(options) as toil_obj:
         workflow_failed = False
-        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir}
+        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode}
         workflow_params.update(requirements_dict)
         roslin_workflow = roslin_workflow_class(workflow_params)
         clean_up_dict = {'logger':logger,'toil_obj':toil_obj,'track_leader':track_leader,'clean_workflow':clean_workflow,'batch_system':options.batch_system,'uuid':options.project_uuid,'workflow':roslin_workflow}
