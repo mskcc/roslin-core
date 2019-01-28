@@ -1154,12 +1154,17 @@ class RoslinTrack():
 		work_dir = self.work_dir
 		job_dict = self.jobs
 		workflow_id = self.workflow_id
-		for single_dir in os.listdir(work_dir):
+		for root, dirs, files in os.walk(work_dir):
+			for single_file in files:
+				if single_file == "worker_log.txt":
+					worker_log_path = os.path.join(root,single_file)
+					worker_info = self.read_worker_log(worker_log_path)
+		'''for single_dir in os.listdir(work_dir):
 			if workflow_id in single_dir:
 				single_dir_path = os.path.join(work_dir,single_dir)
 				for single_temp_dir in os.listdir(single_dir_path):
 					worker_log_path = os.path.join(single_dir_path,single_temp_dir,"worker_log.txt")
-					worker_info = self.read_worker_log(worker_log_path)
+					worker_info = self.read_worker_log(worker_log_path)'''
 
 	def check_for_finished_jobs(self):
 		job_dict = self.jobs
