@@ -740,9 +740,8 @@ class RoslinWorkflow():
 		"-w",job_cwl,
 		"-i",job_yaml,
 		"-b",batch_system,
-		"-p",project_id,
 		"-j",job_jobstore,
-		"-d",job_work_dir,
+		"-k",job_work_dir,
 		"-u",job_uuid,
 		"-o",job_output_dir]
 		if job_restart:
