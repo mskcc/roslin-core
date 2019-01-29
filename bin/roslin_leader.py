@@ -154,9 +154,6 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
                 if not started:
                     workflow_transition(logger,roslin_workflow,job_uuid,running_status)
                     started = True
-
-
-
             log_obj = read_file(workflow_log_file,log_file_positon)
             log_file_positon = log_obj['position']
             log_contents = log_obj['contents'].rstrip()
