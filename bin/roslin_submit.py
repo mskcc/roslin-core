@@ -92,6 +92,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
         roslin_leader_command.append('--debug-mode')
     if test_mode:
         roslin_leader_command.append('--test-mode')
+        roslin_leader_command.extend(['--maxCores',"4"])
     for single_requirement_key in requirements_dict:
         requirement_value, requirement_option = requirements_dict[single_requirement_key]
         roslin_leader_command.extend([requirement_option,requirement_value])
