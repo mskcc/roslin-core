@@ -2,7 +2,7 @@
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, ProjectWorkflow, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event
-from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal
+from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message
 from toil.common import Toil
 from toil.job import Job, JobNode
 from toil.leader import FailedJobsException
@@ -101,15 +101,18 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
     if status == running_status:
         start_message = workflow_name + " is now starting"
         log(logger,'info',start_message)
+        log(logger,'info',starting_log_message)
         roslin_workflow.on_start()
     if status == done_status:
         done_message = workflow_name + " is now done"
         log(logger,'info',done_message)
+        log(logger,'info',finished_log_message)
         roslin_workflow.on_success()
         roslin_workflow.on_complete()
     if status == exit_status:
         exit_message = workflow_name + " has exited"
         log(logger,'info',exit_message)
+        log(logger,'info',exiting_log_message)
         roslin_workflow.on_fail()
         roslin_workflow.on_complete()
 
@@ -390,7 +393,6 @@ if __name__ == "__main__":
             roslin_track.join()
             if workflow_failed:
                 workflow_transition(logger,roslin_workflow,options.project_uuid,exit_status)
-                log(logger,"error","exiting")
                 exit(1)
             else:
                 workflow_transition(logger,roslin_workflow,options.project_uuid,done_status)
