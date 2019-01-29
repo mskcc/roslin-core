@@ -129,9 +129,15 @@ def kill_project(project_name, project_uuid, work_dir, batch_system, user_termin
     project_pid = get_pid(work_dir)
     if project_pid:
         if termination_graceful:
-            os.kill(int(project_pid), signal.SIGINT)
+            try:
+                os.kill(int(project_pid), signal.SIGINT)
+            except OSError:
+                print_error("Could not find pid "+str(project_pid)+ " . Project might have already exited")
         else:
-            os.kill(int(project_pid), signal.SIGKILL)
+            try:
+                os.kill(int(project_pid), signal.SIGKILL)
+            except OSError:
+                print_error("Could not find pid "+str(project_pid)+ " . Project might have already exited")
             if batch_system == "LSF":
                 kill_all_lsf_jobs(None,project_uuid)
             exit_status = status_names['exit']
