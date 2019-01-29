@@ -52,7 +52,7 @@ EXAMPLE:
 EOF
 }
 
-while getopts “v:w:i:b:o:j:d:rzd:u:” OPTION
+while getopts “v:w:i:b:o:j:k:d:rzd:u:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
