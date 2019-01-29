@@ -11,6 +11,9 @@ import signal
 import socket
 import getpass
 
+starting_log_message="------------ starting ------------"
+exiting_log_message="------------ exiting ------------"
+finished_log_message="------------ finished ------------"
 
 def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
     pre_exec_fn = None
@@ -33,7 +36,11 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
                 single_output_line = single_line.rstrip()
                 if single_output_line:
                     print(single_output_line)
-                    output = output + single_output_line
+                    output = output + "\n" + single_output_line
+                    if exiting_log_message in single_output_line or finished_log_message in single_output_line:
+                        single_process.stdout.close()
+                        errorcode = single_process.wait()
+                        return {"output":output,"error":error,"errorcode":errorcode}
             single_process.stdout.close()
             errorcode = single_process.wait()
     if wait:
@@ -44,7 +51,20 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
 def run_command(command,stdout_file,stderr_file,shell,wait):
     if stdout_file and stderr_file:
         with open(stdout_file,'w') as log_file_stdout, open(stderr_file,'w') as log_file_stderr:
-            return run_popen(command,log_file_stdout,log_file_stderr,shell,wait,False)
+            command_output = run_popen(command,log_file_stdout,log_file_stderr,shell,wait,False)
+        output_log = ''
+        error_log = ''
+        if os.path.exists(stdout_file):
+            with open(stdout_file,'r') as stdout_log:
+                output_log = stdout_log.read()
+        if os.path.exists(stderr_file):
+            with open(stderr_file,'r') as stderr_log:
+                error_log = stderr_log.read()
+        command_stdout = command_output['output'] + "\n----- log stdout -----\n" + output_log
+        command_stderr = command_output['error'] +  "\n----- log stderr -----\n" + error_log
+        print(command_stdout)
+        print_error(command_stderr)
+        return command_output
     else:
         return run_popen(command,PIPE,PIPE,shell,wait,False)
 
