@@ -267,6 +267,8 @@ def track_job_helper(track_job_flag,params,job_params,restart,logger):
 def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
 	run_data_doc = get_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid)
+	if not run_result_doc or not run_data_doc:
+		return
 	for single_job_key in status_change:
 		single_job_obj = status_change[single_job_key]['job_obj']
 		single_tool_status = single_job_obj['single_tool_status']
@@ -284,6 +286,8 @@ def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
 
 def update_workflow_run_results(logger,project_uuid,workflow_jobs_dict):
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
+	if not run_result_doc:
+		return
 	for single_workflow_job_key in workflow_jobs_dict:
 		single_workflow_job = workflow_jobs_dict[single_workflow_job_key]
 		job_id, job_doc = construct_workflow_run_results_doc(single_workflow_job)
@@ -311,6 +315,8 @@ def update_run_data_doc(logger,project_uuid,run_data_doc):
 
 def update_run_results_status(logger,project_uuid,status):
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
+	if not run_result_doc:
+		return
 	status_name_dict = get_status_names()
 	current_time = get_current_time()
 	duration = None
@@ -336,6 +342,8 @@ def update_run_results_status(logger,project_uuid,status):
 def update_run_results_restart(logger,project_uuid,submitted_time):
 	status_name_dict = get_status_names()
 	run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
+	if not run_result_doc:
+		return
 	restart_dict = {'status':run_result_doc['status'],'timestamp':run_result_doc['timestamp']}
 	run_result_doc['restarts'].append(restart_dict)
 	run_result_doc['status'] = status_name_dict['pending']
@@ -389,6 +397,8 @@ def construct_workflow_run_results_doc(single_job_info):
 
 def add_user_event(logger, project_uuid, user_event_data, user_event_type):
 	project_doc = get_mongo_document(logger,PROJECTS_COLLECTION,project_uuid)
+	if not project_doc:
+		return
 	current_time = get_current_time()
 	user_event = {"type":user_event_type, "time":current_time, "data":user_event_data}
 	project_doc["userEvents"].append(user_event)
