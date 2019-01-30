@@ -928,7 +928,7 @@ class RoslinTrack():
 		self.worker_jobs = {}
 		self.project_uuid = project_uuid
 		self.job_store_obj = None
-		self.job_store_resume_attempts = 50
+		self.job_store_resume_attempts = 5000
 		self.restart = restart
 		self.restart_num = 2
 		self.logger = logger
