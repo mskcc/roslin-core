@@ -719,6 +719,7 @@ class RoslinWorkflow():
 		job_uuid = params['job_uuid']
 		pipeline_name_version = params['pipeline_name'] + "/" + params['pipeline_version']
 		debug_mode = params['debug_mode']
+		test_mode = params['test_mode']
 		batch_system = job_params['batch_system']
 		job_work_dir = job_params['work_dir']
 		job_tmp_dir = job_params['tmp_dir']
@@ -758,6 +759,8 @@ class RoslinWorkflow():
 			roslin_runner_command.extend(["-r"])
 		if debug_mode:
 			roslin_runner_command.extend(["-d"])
+		if test_mode:
+			roslin_runner_command.extend(["-t"])
 		if not os.path.exists(log_folder):
 			os.mkdir(log_folder)
 		log_stdout = job_name + "-stdout.log"
