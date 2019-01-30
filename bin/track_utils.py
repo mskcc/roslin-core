@@ -1137,7 +1137,8 @@ class RoslinTrack():
 								job_stream_path = job_state_contents['jobName']
 							job_stream_file = read_only_job_store_obj.readFileStream(job_stream_path)
 							tool_key = ""
-							if os.path.exists(job_stream_path):
+							job_stream_abs_path = read_only_job_store_obj._getAbsPath(job_stream_path)
+							if os.path.exists(job_stream_abs_path):
 								with job_stream_file as job_stream:
 									job_stream_contents = safeUnpickleFromStream(job_stream)
 									job_stream_contents_dict = job_stream_contents.__dict__
