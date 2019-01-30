@@ -50,7 +50,7 @@ def main():
 
 
 
-    options = parser.parse_known_args()
+    options = parser.parse_args()
     pipeline_name = options.pipeline_name
     pipeline_version = options.pipeline_version
     project_id = options.project_id
