@@ -60,10 +60,20 @@ def run_command(command,stdout_file,stderr_file,shell,wait):
         if os.path.exists(stderr_file):
             with open(stderr_file,'r') as stderr_log:
                 error_log = stderr_log.read()
-        command_stdout = command_output['output'] + "\n----- log stdout -----\n" + output_log
-        command_stderr = command_output['error'] +  "\n----- log stderr -----\n" + error_log
-        print(command_stdout)
-        print_error(command_stderr)
+	command_stdout = ""
+	command_stderr = ""
+	if command_output['output']:
+	    command_stdout = command_output['output']
+	if command_output['error']:
+	    command_stderr = command_output['error']
+	if output_log:
+	    command_stdout = command_stdout + "\n----- log stdout -----\n" + output_log
+	if error_log:
+	    command_stderr = command_stderr +  "\n----- log stderr -----\n" + error_log
+	if command_stdout:
+	    print(command_stdout)
+	if command_stderr:
+	    print_error(command_stderr)
         return command_output
     else:
         return run_popen(command,PIPE,PIPE,shell,wait,False)
