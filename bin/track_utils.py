@@ -4,7 +4,7 @@ import shutil
 import logging
 logging.getLogger("rdflib").setLevel(logging.WARNING)
 logging.getLogger("toil.jobStores.fileJobStore").setLevel(logging.WARNING)
-logging.getLogger("toil.jobStores.abstractJobStore").setLevel(logging.WARNING)
+logging.getLogger("toil.jobStores.abstractJobStore").disabled = True
 logging.getLogger("toil.toilState").setLevel(logging.WARNING)
 from toil.common import Toil, safeUnpickleFromStream
 from toil.jobStores.fileJobStore import FileJobStore
