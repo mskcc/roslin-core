@@ -1127,21 +1127,24 @@ class RoslinTrack():
 							job_name = ''
 							job_state_path = os.path.join(root,single_file)
 							tool_key = None
+							job_stream_path = ""
 							with open(job_state_path,'rb') as job_state_file:
 								job_state_contents = dill.load(job_state_file)
 								job_state = job_state_contents
 								job_stream_path = job_state_contents['jobName']
 							job_stream_file = read_only_job_store_obj.readFileStream(job_stream_path)
-							with job_stream_file as job_stream:
-								job_stream_contents = safeUnpickleFromStream(job_stream)
-								job_stream_contents_dict = job_stream_contents.__dict__
-								job_name = job_stream_contents_dict['jobName']
-								if job_name not in CWL_INTERNAL_JOBS:
-									tool_key = self.make_key_from_file(job_name,True)
-								else:
-									continue
-								if 'cwljob' in job_stream_contents_dict:
-									job_info = job_stream_contents_dict['cwljob']
+							tool_key = ""
+							if os.path.exists(job_stream_path):
+								with job_stream_file as job_stream:
+									job_stream_contents = safeUnpickleFromStream(job_stream)
+									job_stream_contents_dict = job_stream_contents.__dict__
+									job_name = job_stream_contents_dict['jobName']
+									if job_name not in CWL_INTERNAL_JOBS:
+										tool_key = self.make_key_from_file(job_name,True)
+									else:
+										continue
+									if 'cwljob' in job_stream_contents_dict:
+										job_info = job_stream_contents_dict['cwljob']
 							if tool_key:
 								if tool_key in job_dict:
 									tool_dict = job_dict[tool_key]
