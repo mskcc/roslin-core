@@ -892,6 +892,7 @@ class RoslinTrack():
 		self.job_store_path = job_store_path
 		self.work_dir = work_dir
 		self.tmp_dir = tmp_dir
+		self.jobs_path = {}
 		self.run_attempt = run_attempt
 		self.workflow_id = ''
 		self.jobs = {}
@@ -972,6 +973,7 @@ class RoslinTrack():
 	def check_jobs(self,track_job_flag):
 		logger = self.logger
 		job_dict = self.jobs
+		jobs_path = self.jobs_path
 		job_store_resume_attempts = self.job_store_resume_attempts
 		retry_job_ids = self.retry_job_ids
 		current_attempt = 0
@@ -1052,11 +1054,16 @@ class RoslinTrack():
 					retry_count = retry_job_ids[jobstore_id]
 				job_id = self.create_job_id(jobstore_id,retry_count)
 				job_stream = None
+				job_info = None
 				if single_job.command:
 					job_stream = single_job.command.split(" ")[1]
 				job_key = self.make_key_from_file(job_name,True)
+				if job_stream:
+					jobs_path[job_stream] = job_key
+					job_stream_obj = self.read_job_stream(job_store_obj,job_stream)
+					job_info = job_stream_obj['job_info']
 				current_jobs.append(job_id)
-				worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream}
+				worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream,"job_info":job_info}
 				if job_key not in job_dict:
 					job_dict[job_key] = {'submitted':{},'workers':{},'done':{},'exit':{}}
 				tool_dict = job_dict[job_key]
@@ -1064,6 +1071,7 @@ class RoslinTrack():
 					tool_dict['submitted'][job_id] = current_time
 				if job_id not in tool_dict['workers']:
 					tool_dict['workers'][job_id] = worker_obj
+		self.jobs_path = jobs_path
 		self.current_jobs = current_jobs
 
 	def make_key_from_file(self,job_name,use_basename):
@@ -1078,11 +1086,27 @@ class RoslinTrack():
 		safe_key = re.sub("["+punctuation+"]","_",job_id)
 		return safe_key
 
+	def read_job_stream(self,job_store_obj,job_stream_path):
+		job_stream_file = job_store_obj.readFileStream(job_stream_path)
+		job_stream_abs_path = job_store_obj._getAbsPath(job_stream_path)
+		job_id = ""
+		job_info = None
+		if os.path.exists(job_stream_abs_path):
+			with job_stream_file as job_stream:
+				job_stream_contents = safeUnpickleFromStream(job_stream)
+				job_stream_contents_dict = job_stream_contents.__dict__
+				job_name = job_stream_contents_dict['jobName']
+				if job_name not in CWL_INTERNAL_JOBS:
+					job_id = self.make_key_from_file(job_name,True)
+					if 'cwljob' in job_stream_contents_dict:
+						job_info = job_stream_contents_dict['cwljob']
+		return {"job_id":job_id,"job_info":job_info}
 
 	def read_worker_log(self,worker_log_path):
 		worker_jobs = self.worker_jobs
 		logger = self.logger
 		job_dict = self.jobs
+		jobs_path = self.jobs_path
 		read_only_job_store_obj = self.job_store_obj
 		current_time = get_current_time()
 		worker_log_key = self.make_key_from_file(worker_log_path,False)
@@ -1105,27 +1129,14 @@ class RoslinTrack():
 								job_state_contents = dill.load(job_state_file)
 								job_state = job_state_contents
 								job_stream_path = job_state_contents['jobName']
-							job_stream_file = read_only_job_store_obj.readFileStream(job_stream_path)
-							tool_key = ""
-							job_stream_abs_path = read_only_job_store_obj._getAbsPath(job_stream_path)
-							if os.path.exists(job_stream_abs_path):
-								with job_stream_file as job_stream:
-									job_stream_contents = safeUnpickleFromStream(job_stream)
-									job_stream_contents_dict = job_stream_contents.__dict__
-									job_name = job_stream_contents_dict['jobName']
-									if job_name not in CWL_INTERNAL_JOBS:
-										tool_key = self.make_key_from_file(job_name,True)
-									else:
-										continue
-									if 'cwljob' in job_stream_contents_dict:
-										job_info = job_stream_contents_dict['cwljob']
+								tool_key = jobs_path[job_stream_path]
 							if tool_key:
 								if tool_key in job_dict:
 									tool_dict = job_dict[tool_key]
 									for single_job_key in tool_dict['workers']:
 										single_worker_obj = tool_dict['workers'][single_job_key]
 										if single_worker_obj["job_stream"] == job_stream_path:
-											worker_info = {'job_state':job_state,'job_info':job_info,'log_path':worker_log_path,'started':current_time,'last_modified': last_modified}
+											worker_info = {'job_state':job_state,'log_path':worker_log_path,'started':current_time,'last_modified': last_modified}
 											single_worker_obj.update(worker_info)
 											tool_info = (tool_key,single_job_key)
 											list_of_tools.append(tool_info)
