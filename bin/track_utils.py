@@ -295,14 +295,20 @@ def update_workflow_run_results(logger,project_uuid,workflow_jobs_dict):
 	run_result_doc['timestamp']['lastUpdated'] = get_current_time()
 	update_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid,run_result_doc)
 
-def fail_all_running_or_pending_jobs(job_dict):
+def modify_all_running_or_pending_jobs(job_dict,updated_status):
 	status_name_dict = get_status_names()
 	for job_id in job_dict:
 		job_obj = job_dict[job_id]
 		job_status = job_obj['status']
 		if job_status == status_name_dict['running'] or job_status == status_name_dict['pending'] or job_status == status_name_dict['unknown']:
-			job_obj['status'] = status_name_dict['exit']
+			job_obj['status'] = status_name_dict[updated_status]
 			job_obj['timestamp']['finished'] = get_current_time()
+
+def fail_all_running_or_pending_jobs(job_dict):
+	modify_all_running_or_pending_jobs(job_dict,'exit')
+
+def finish_all_running_or_pending_jobs(job_dict):
+	modify_all_running_or_pending_jobs(job_dict,'done')
 
 def update_run_result_doc(logger,project_uuid,run_result_doc):
 	update_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid,run_result_doc)
@@ -323,6 +329,9 @@ def update_run_results_status(logger,project_uuid,status):
 	if status == status_name_dict['exit']:
 		fail_all_running_or_pending_jobs(run_result_doc['batchSystemJobs'])
 		fail_all_running_or_pending_jobs(run_result_doc['workflowJobs'])
+	if status == status_name_dict['done']:
+		finish_all_running_or_pending_jobs(run_result_doc['batchSystemJobs'])
+		finish_all_running_or_pending_jobs(run_result_doc['workflowJobs'])
 	if status == status_name_dict['running']:
 		if run_result_doc["timestamp"]["started"] == None:
 			run_result_doc["timestamp"]["started"] = current_time
