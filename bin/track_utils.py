@@ -342,7 +342,8 @@ def update_run_results_status(logger,project_uuid,status):
 			run_result_doc["timestamp"]["finished"] = current_time
 			started_time = run_result_doc["timestamp"]["started"]
 			finished_time = current_time
-			#duration = get_time_difference(started_time, finished_time)['total_seconds']
+			if started_time and finished_time:
+				duration = get_time_difference(started_time, finished_time)['total_seconds']
 	run_result_doc["timestamp"]["duration"] = duration
 	run_result_doc['status'] = status
 	run_result_doc['timestamp']['lastUpdated'] = get_current_time()
