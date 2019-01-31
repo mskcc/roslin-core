@@ -593,31 +593,11 @@ def find_unique_name_in_dict(root_name,dict_obj):
 	return new_key
 
 class RoslinWorkflow():
-	#def __init__(self, project_id, job_uuid, pipeline_name, pipeline_version, batch_system, jobstore_id, restart, debug_mode, output_dir, tmp_dir, workflow_name, input_yaml,log_folder, run_attempt, work_dir, input_meta):
 	def __init__(self,params):
 		if not params:
 			return
-		'''
-		params = {}
-		params['project_id'] = project_id
-		params['job_uuid'] = job_uuid
-		params['pipeline_name'] = pipeline_name
-		params['pipeline_version'] = pipeline_version
-		params['restart'] = restart
-		params['batch_system'] = batch_system
-		params['jobstore'] = jobstore_id
-		params['debug_mode'] = debug_mode
-		params['output_dir'] = output_dir
-		params['workflow_name'] = workflow_name
-		params['work_dir'] = work_dir
-		params['tmp_dir'] = tmp_dir
-		params['input_yaml'] = input_yaml
-		params['output_dir'] = output_dir
-		params['run_attempt'] = run_attempt'''
 		output_dir = params['output_dir']
 		params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
-		#params['log_folder'] = log_folder
-		#params['input_meta_json'] = input_meta
 		workflow_name = params['workflow_name']
 		log_folder = params['log_folder']
 		if 'logger' not in params:
@@ -632,12 +612,7 @@ class RoslinWorkflow():
 			add_file_handler(logger,log_path,None,logging_level)
 			params['logger'] = dill.dumps(logger)
 			self.log_file = log_path
-		#if debug_mode:
-		#	logging_level = logging.DEBUG
-		#else:
-		#	logging_level = logging.INFO
 		self.jobs = {}
-
 		self.params = params
 		self.configure()
 
@@ -784,7 +759,6 @@ class RoslinWorkflow():
 		track_job_flag.set()
 		roslin_track_worker.start()
 		cwl_process_ret_code = run_command(roslin_runner_command,log_path_stdout,log_path_stderr,False,True)
-		#cwl_process_ret_code = run_command_realtime(roslin_runner_command, False)
 		track_job_flag.clear()
 		roslin_track_worker.join()
 		error_code = cwl_process_ret_code['errorcode']
@@ -809,10 +783,6 @@ class ProjectWorkflow(RoslinWorkflow):
 		default_job_params['cwl'] = "project-workflow.cwl"
 		leader_job = self.create_job(self.run_cwl,self.params,default_job_params,"ProjectWorkflow")
 		return leader_job
-
-
-
-
 
 class ReadOnlyFileJobStore(FileJobStore):
 
@@ -1176,12 +1146,6 @@ class RoslinTrack():
 				if single_file == "worker_log.txt":
 					worker_log_path = os.path.join(root,single_file)
 					worker_info = self.read_worker_log(worker_log_path)
-		'''for single_dir in os.listdir(work_dir):
-			if workflow_id in single_dir:
-				single_dir_path = os.path.join(work_dir,single_dir)
-				for single_temp_dir in os.listdir(single_dir_path):
-					worker_log_path = os.path.join(single_dir_path,single_temp_dir,"worker_log.txt")
-					worker_info = self.read_worker_log(worker_log_path)'''
 
 	def check_for_finished_jobs(self):
 		job_dict = self.jobs
@@ -1244,19 +1208,6 @@ class RoslinTrack():
 			if new_job_status:
 				job_status = copy.deepcopy(new_job_status)
 			time.sleep(sleep_time)
-			'''self.check_jobs(track_job_flag)
-			if not track_job_flag.is_set():
-				continue
-			self.check_for_running()
-			self.check_for_finished_jobs()
-			new_job_status = self.prepare_job_status()
-			status_change = self.get_change_status(job_status,new_job_status)
-			jobs_dict = self.jobs
-			if status_change:
-				update_batch_system_run_results(logger,project_uuid,status_change,jobs_dict)
-				self.print_change_status(status_change)
-			job_status = copy.deepcopy(new_job_status)
-			time.sleep(sleep_time)'''
 
 	def check_status_change(self,job_status,track_job_flag):
 		logger = self.logger
