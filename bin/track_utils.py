@@ -1127,19 +1127,25 @@ class RoslinTrack():
 		return safe_key
 
 	def read_job_stream(self,job_store_obj,job_stream_path):
-		job_stream_file = job_store_obj.readFileStream(job_stream_path)
-		job_stream_abs_path = job_store_obj._getAbsPath(job_stream_path)
+		logger = self.logger
 		job_id = ""
 		job_info = None
-		if os.path.exists(job_stream_abs_path):
-			with job_stream_file as job_stream:
-				job_stream_contents = safeUnpickleFromStream(job_stream)
-				job_stream_contents_dict = job_stream_contents.__dict__
-				job_name = job_stream_contents_dict['jobName']
-				if job_name not in CWL_INTERNAL_JOBS:
-					job_id = self.make_key_from_file(job_name,True)
-					if 'cwljob' in job_stream_contents_dict:
-						job_info = job_stream_contents_dict['cwljob']
+		try:
+			job_stream_file = job_store_obj.readFileStream(job_stream_path)
+			job_stream_abs_path = job_store_obj._getAbsPath(job_stream_path)
+			if os.path.exists(job_stream_abs_path):
+				with job_stream_file as job_stream:
+					job_stream_contents = safeUnpickleFromStream(job_stream)
+					job_stream_contents_dict = job_stream_contents.__dict__
+					job_name = job_stream_contents_dict['jobName']
+					if job_name not in CWL_INTERNAL_JOBS:
+						job_id = self.make_key_from_file(job_name,True)
+						if 'cwljob' in job_stream_contents_dict:
+							job_info = job_stream_contents_dict['cwljob']
+		except:
+			debug_message = "Could not read job path: " +str(job_stream_path) + ".\n"+traceback.format_exc()
+			log(logger,"debug",debug_message)
+
 		return {"job_id":job_id,"job_info":job_info}
 
 	def read_worker_log(self,worker_log_path):
