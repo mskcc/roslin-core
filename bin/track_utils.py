@@ -1094,7 +1094,7 @@ class RoslinTrack():
 					tool_dict['submitted'][job_id] = current_time
 				if job_id not in tool_dict['workers']:
 					tool_dict['workers'][job_id] = worker_obj
-				updated_list = []
+		updated_list = []
 		for single_job_to_update in job_info_to_update.keys():
 			job_stream = single_job_to_update
 			job_key = job_info_to_update[single_job_to_update]['job_key']
