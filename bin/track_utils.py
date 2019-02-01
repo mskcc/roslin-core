@@ -106,12 +106,16 @@ def make_mongo_key_safe(key):
 	return key.replace("$","").replace(".","")
 
 def make_mongo_safe_tuple(logger,tuple_obj):
+	if not tuple_obj:
+		return tuple_obj
 	list_value = list(tuple_obj)
 	return tuple(make_mongo_safe_list(logger,list_value))
 
 def make_mongo_safe_list(logger,list_obj):
 	mongo_safe_list = []
 	safe_list_elem = None
+	if not list_obj:
+		return list_obj
 	for single_item in list_obj:
 		if isinstance(single_item, dict):
 			safe_list_elem = make_mongo_safe_dict(logger,single_item)
@@ -128,6 +132,8 @@ def make_mongo_safe_list(logger,list_obj):
 def make_mongo_safe_dict(logger,dict_obj):
 	keys_to_delete = []
 	updated_dict = {}
+	if not dict_obj:
+		return dict_obj
 	for single_key in dict_obj:
 		if single_key == '_id':
 			continue

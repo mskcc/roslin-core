@@ -278,7 +278,8 @@ def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
 def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
 
     def convert_list(sample_list):
-        #print(sample_list)
+        if not sample_list:
+            return sample_list
         new_list = []
         for single_item in sample_list:
             if isinstance(single_item,dict):
@@ -297,6 +298,8 @@ def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
         file_prefix = False
         file_key = ''
         new_dict = {}
+        if not sample_dict:
+            return sample_dict
         for single_key in sample_dict.keys():
             sample_obj = sample_dict[single_key]
             if isinstance(sample_obj,dict):
