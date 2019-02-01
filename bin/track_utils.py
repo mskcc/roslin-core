@@ -1033,7 +1033,7 @@ class RoslinTrack():
 					toil_state_obj = toil_state(job_store,root_job,jobCache=job_store_cache)
 			except:
 				retry_message = "Jobstore not loaded properly, trying again ( Attempt " +str(current_attempt) + " / " + str(job_store_resume_attempts) + " )\n"+traceback.format_exc()
-				log(logger,"info",retry_message)
+				log(logger,"debug",retry_message)
 				if current_attempt < job_store_resume_attempts:
 					current_attempt = current_attempt + 1
 					time.sleep(5)
