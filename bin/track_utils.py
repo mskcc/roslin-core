@@ -1078,7 +1078,7 @@ class RoslinTrack():
 				job_key = self.make_key_from_file(job_name,True)
 				if job_stream:
 					jobs_path[job_stream] = job_key
-					job_stream_obj = self.read_job_stream(job_store_obj,job_stream)
+					job_stream_obj = self.read_job_stream(job_store,job_stream)
 					job_info = job_stream_obj['job_info']
 				current_jobs.append(job_id)
 				worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream,"job_info":job_info}
