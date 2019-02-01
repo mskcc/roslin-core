@@ -911,6 +911,7 @@ class RoslinTrack():
 		self.work_dir = work_dir
 		self.tmp_dir = tmp_dir
 		self.jobs_path = {}
+		self.job_info_to_update = {}
 		self.run_attempt = run_attempt
 		self.workflow_id = ''
 		self.jobs = {}
@@ -992,6 +993,7 @@ class RoslinTrack():
 		logger = self.logger
 		job_dict = self.jobs
 		jobs_path = self.jobs_path
+		job_info_to_update = self.job_info_to_update
 		job_store_resume_attempts = self.job_store_resume_attempts
 		retry_job_ids = self.retry_job_ids
 		current_attempt = 0
@@ -1080,6 +1082,9 @@ class RoslinTrack():
 					jobs_path[job_stream] = job_key
 					job_stream_obj = self.read_job_stream(job_store,job_stream)
 					job_info = job_stream_obj['job_info']
+					if not job_info:
+						single_job_info_to_update = {'job_key':job_key,'job_id':job_id}
+						job_info_to_update[job_stream] = single_job_info_to_update
 				current_jobs.append(job_id)
 				worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream,"job_info":job_info}
 				if job_key not in job_dict:
@@ -1089,6 +1094,19 @@ class RoslinTrack():
 					tool_dict['submitted'][job_id] = current_time
 				if job_id not in tool_dict['workers']:
 					tool_dict['workers'][job_id] = worker_obj
+				updated_list = []
+		for single_job_to_update in job_info_to_update.keys():
+			job_stream = single_job_to_update
+			job_key = job_info_to_update[single_job_to_update]['job_key']
+			job_id = job_info_to_update[single_job_to_update]['job_id']
+			job_stream_obj = self.read_job_stream(job_store,job_stream)
+			job_info = job_stream_obj['job_info']
+			if job_info:
+				tool_dict = job_dict[job_key]
+				worker_obj = tool_dict['workers'][job_id]
+				worker_obj['job_info'] = job_info
+				tool_dict['workers'][job_id] = worker_obj
+		self.job_info_to_update = job_info_to_update
 		self.jobs_path = jobs_path
 		self.current_jobs = current_jobs
 
@@ -1129,6 +1147,7 @@ class RoslinTrack():
 		current_time = get_current_time()
 		worker_log_key = self.make_key_from_file(worker_log_path,False)
 		if os.path.isfile(worker_log_path):
+			update_worker_jobs = False
 			last_modified = self.get_file_modification_time(worker_log_path)
 			if worker_log_key not in worker_jobs:
 				worker_info = None
@@ -1147,18 +1166,23 @@ class RoslinTrack():
 								job_state_contents = dill.load(job_state_file)
 								job_state = job_state_contents
 								job_stream_path = job_state_contents['jobName']
-								tool_key = jobs_path[job_stream_path]
+								if job_stream_path in jobs_path:
+									tool_key = jobs_path[job_stream_path]
 							if tool_key:
 								if tool_key in job_dict:
 									tool_dict = job_dict[tool_key]
 									for single_job_key in tool_dict['workers']:
 										single_worker_obj = tool_dict['workers'][single_job_key]
 										if single_worker_obj["job_stream"] == job_stream_path:
+											update_worker_jobs = True
 											worker_info = {'job_state':job_state,'log_path':worker_log_path,'started':current_time,'last_modified': last_modified}
 											single_worker_obj.update(worker_info)
 											tool_info = (tool_key,single_job_key)
 											list_of_tools.append(tool_info)
-				worker_jobs[worker_log_key] = {'list_of_tools':list_of_tools}
+							else:
+								update_worker_jobs = False
+				if update_worker_jobs:
+					worker_jobs[worker_log_key] = {'list_of_tools':list_of_tools}
 			else:
 				worker_jobs_tool_list = worker_jobs[worker_log_key]['list_of_tools']
 				for single_tool,single_job_key in worker_jobs_tool_list:
