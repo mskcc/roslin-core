@@ -1106,6 +1106,10 @@ class RoslinTrack():
 				worker_obj = tool_dict['workers'][job_id]
 				worker_obj['job_info'] = job_info
 				tool_dict['workers'][job_id] = worker_obj
+				updated_list.append(single_job_to_update)
+		for single_job_updated in updated_list:
+			if single_job_updated in single_job_to_update:
+				del single_job_to_update[single_job_updated]
 		self.job_info_to_update = job_info_to_update
 		self.jobs_path = jobs_path
 		self.current_jobs = current_jobs
