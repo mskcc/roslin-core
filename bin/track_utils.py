@@ -646,7 +646,7 @@ class RoslinWorkflow():
 		job_params['batch_system'] = self.params['batch_system']
 		job_params['tmp_dir'] = self.params['tmp_dir']
 		job_params['poll_interval'] = 2
-		job_params['memory'] = '2G'
+		job_params['memory'] = '8G'
 		job_params['cores'] = 1
 		job_params['disk'] = '3G'
 		job_params['restart'] = False
