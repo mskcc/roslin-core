@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
-from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, ProjectWorkflow, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event
+from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event
 from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message
 from toil.common import Toil
 from toil.job import Job, JobNode
