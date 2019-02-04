@@ -795,13 +795,6 @@ class RoslinWorkflow():
 	def on_success(self):
 		pass
 
-class ProjectWorkflow(RoslinWorkflow):
-	def run_pipeline(self):
-		default_job_params = self.set_default_job_params()
-		default_job_params['cwl'] = "project-workflow.cwl"
-		leader_job = self.create_job(self.run_cwl,self.params,default_job_params,"ProjectWorkflow")
-		return leader_job
-
 class ReadOnlyFileJobStore(FileJobStore):
 
 	def __init__(self, path):
