@@ -23,7 +23,7 @@ import copy
 from subprocess import PIPE, Popen
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty
+from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs
 import dill
 import simplejson
 import sys
@@ -57,6 +57,8 @@ PROJECTS_COLLECTION = "Projects"
 RUN_PROFILES_COLLECTION = "RunProfiles"
 RUN_DATA_COLLECTION = "RunData"
 client = MongoClient(MONGO_URL, connect=False)
+
+copy_outputs_config = {"bam": (None, 5), "vcf": (None, 3), "maf": (1,2) , "qc": (2,2), "log": (1,1), "inputs": (1,1), "facets": (1,1)}
 
 ### mongo wrappers ###
 
@@ -635,7 +637,71 @@ class RoslinWorkflow():
 		self.configure()
 
 	def configure(self):
-		pass
+		params = self.params
+		if 'sub_workflows' not in params:
+			self.params['sub_workflows'] = {}
+		if 'copy_outputs_config' not in params:
+			self.params['copy_outputs_config'] = {"log": [{"patterns": ["*.log"], "folder": ["outputs"], "parallels": 2}],
+											   "inputs": [{"patterns": ["*.yaml","*.txt"], "folder": ["outputs"], "parallels": 1}]}
+
+	def get_subworkflow_info(self):
+		subworkflow_name = self.__class__.__name__
+		subworkflow_info = self.params['sub_workflows'][subworkflow_name]
+		subworkflow_output = subworkflow_info['output']
+		subworkflow_filename = subworkflow_info['filename']
+		return (subworkflow_filename, subworkflow_output)
+
+	def update_copy_outputs_config(self,new_config):
+		params = self.params
+		copy_outputs_config = params['copy_outputs_config']
+		for single_key in new_config:
+			folder_config = new_config[single_key]
+			if single_key not in copy_outputs_config:
+				copy_outputs_config[single_key] = []
+			copy_outputs_config.extend(folder_config)
+		self.params['copy_outputs_config'] = copy_outputs_config
+
+	def copy_workflow_outputs(self,last_workflow_job):
+		params = self.params
+		logger = dill.loads(params['logger'])
+		num_groups = int(params['num_groups'])
+		num_pairs = int(params['num_pairs'])
+		outputs_path = "/ifs/work/pi/roslin-test/roslin-results" #params['out_dir']
+		overwrite = True#params['force_overwrite']
+		project_id = params['project_id']
+		job_uuid = params['job_uuid']
+		workflow_output_folder = project_id+"."+job_uuid
+		workflow_output_path = os.path.join(outputs_path,workflow_output_folder)
+		if os.path.exists(workflow_output_path)
+			if not overwrite:
+				error_message = workflow_output_path + " already exists, please add the --force_overwrite flag to overwrite"
+				log(logger,"error",error_message)
+			else:
+				info_message = "Removing folder: " + workflow_output_path
+				log(logger,"info",info_message)
+				shutil.rmtree(workflow_output_path)
+		os.mkdir(workflow_output_path)
+		for single_key in copy_outputs_config.keys():
+			num_workers, num_threads = copy_outputs_config[single_key]
+			job_params = self.set_default_job_params()
+			job_params['out_dir'] = outputs_path
+			job_params['folder_key'] = single_key
+			if single_key == 'bam':
+				num_workers = num_groups
+			if single_key == 'vcf':
+				num_workers = num_pairs
+			job_params['max_workers'] = num_workers
+			job_params['worker_threads'] = num_threads
+			job_params['cores'] = num_threads
+			job_params['memory'] = '2G'
+			for single_worker_num in range(0,num_workers):
+				job_name = "roslin_copy_outputs_"+single_key+"_"+str(single_worker_num)
+				job_params['job_name'] = job_name
+				job_params['worker_num'] = single_worker_num
+				roslin_job_obj = RoslinJob(copy_outputs,params,job_params)
+				roslin_job_obj.__dict__['jobName'] = job_name
+				last_workflow_job.addFollowOn(roslin_job_obj)
+		return last_workflow_job
 
 	def add_requirement(self,parser):
 		pass
