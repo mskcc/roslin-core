@@ -574,7 +574,7 @@ class RoslinJob(Job):
 			return_code = job_function(self.params,self.job_params)
 			if return_code!=0 and return_code!=None:
 				error_message = "Job " + str(job_name) + " failed. Returned: "+str(return_code)+"\n"
-				log(logger,"info",error_message)
+				log(logger,"error",error_message)
 				sys.exit(error_message)
 		except Exception:
 			error_message = "Job " + str(job_name) + " failed.\n"+traceback.format_exc()
