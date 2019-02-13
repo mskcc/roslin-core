@@ -390,3 +390,117 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
     roslin_virtualenv_path = os.path.join(roslin_pipeline_data_path,"virtualenv","bin","activate_this.py")
     execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     return pipeline_settings
+
+def chunks(l, n):
+    "split a list into a n-size chunk"
+    l.sort()
+    # for item i in a range that is a length of l,
+    for i in range(0, len(l), n):
+        # create an index range for l of n items:
+        yield l[i:i + n]
+
+
+def create_file_list(src_dir, glob_patterns):
+    "create a list object that contains all the files to be copied"
+
+    file_list = list()
+
+    # iterate through glob_patterns
+    # construct a list that contains all the files to be copied
+    for glob_pattern in glob_patterns:
+        file_list.extend(glob.glob(os.path.join(src_dir, glob_pattern)))
+
+    return list(set(file_list))
+
+
+def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads, worker_num):
+    "create a parallel cp command"
+
+    cmds = list()
+    groups = list()
+
+    groups = list(chunks(file_list, num_workers))
+
+    worker_group = None
+    cmd = None
+    group_length = 0
+
+    if worker_num < len(groups):
+        worker_group = groups[worker_num]
+
+    if worker_group:
+        group_length = len(worker_group)
+        with tempfile.NamedTemporaryFile(delete=False) as file_temp:
+            for filename in worker_group:
+                file_temp.write(filename + "\n")
+            cmd = 'parallel -a ' + file_temp.name + ' -j+' + str(worker_threads) + ' yes | cp {} ' + dst_dir
+
+    return (cmd, group_length)
+
+def copy_outputs(params,job_params):
+    "copy output files in toil work dir to the final destination"
+    from track_utils import log, find_unique_name_in_dir, old_jobs_folder
+    work_dir = params['work_dir']
+    out_dir = params['out_dir']
+    tmp_dir = params['tmp_dir']
+    log_path = params['log_folder']
+    debug_mode = params['debug_mode']
+    output_config = params['copy_outputs_config']
+    folder_key = job_params['folder_key']
+    max_workers = job_params['max_workers']
+    worker_num = job_params['worker_num']
+    worker_threads = job_params['worker_threads']
+    job_name = job_params['job_name']
+    tmp_folder = "roslin_copy_outputs"
+    tmp_path = os.path.join(tmp_dir,tmp_folder)
+    log_folder = log_path
+    if not os.path.exists(tmp_path):
+        os.mkdir(tmp_path)
+    logger = logging.getLogger(job_name)
+    log_file = "roslin_copy_outputs.log"
+    log_file_path = os.path.join(log_folder,log_file)
+    if os.path.exists(log_file_path):
+        log_error_folder = os.path.join(log_folder,old_jobs_folder)
+        if not os.path.exists(log_error_folder):
+            os.mkdir(log_error_folder)
+        if os.path.exists(log_file_path):
+            archive_log = find_unique_name_in_dir(log_file_path,log_error_folder)
+            log_failed = os.path.join(log_error_folder,archive_log)
+            shutil.move(log_file_path,log_failed)
+    if debug_mode:
+        logger.setLevel(logging.DEBUG)
+        add_file_handler(logger,log_path,None,logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+        add_file_handler(logger,log_path,None,logging.INFO)
+
+    folder_data = output_config[folder_key]
+    command_num = 0
+    for single_folder_elem in folder_data:
+        file_patterns = single_folder_elem["patterns"]
+        if "folder" in single_folder_elem:
+            src_folder = single_folder_elem["folder"]
+            src_dir = os.path.join(work_dir,src_folder)
+        else:
+            src_dir = work_dir
+        if "subfolder" in single_folder_elem:
+            dst_folder = single_folder_elem["subfolder"]
+            dst_dir = os.path.join(out_dir,dst_folder)
+            if not os.path.isdir(dst_dir):
+                os.makedirs(dst_dir)
+        else:
+            dst_dir = out_dir
+        file_list = create_file_list(src_dir,file_patterns)
+        file_cmd, group_length = create_parallel_cp_commands(file_list,dst_dir,max_workers,worker_threads,worker_num)
+        if file_cmd != None:
+            copy_info = "[ {} threads: {} ] (Command # {}) Copying {} files from {} to {}\n".format(str(job_name),str(worker_threads),str(command_num),str(group_length),src_dir,dst_dir)
+            log(logger,"info",copy_info)
+            copy_process = run_command_realtime(shlex.split(file_cmd),False)
+            copy_process_ret_code = copy_process['errorcode']
+            if copy_process_ret_code != 0:
+                copy_process_output = copy_process['errorcode']
+                "[ {} threads: {} ] (Command # {}) Failed\n {}".format(str(job_name),str(worker_threads),str(command_num),str(copy_process_output))
+                return copy_process_ret_code
+            else:
+                finished_info = "[ {} threads: {} ] (Command # {}) Finished".format(str(job_name),str(worker_threads),str(command_num))
+                command_num = command_num + 1
