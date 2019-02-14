@@ -1,52 +1,62 @@
 from __future__ import print_function
+from builtins import super
 from subprocess import PIPE, Popen, STDOUT
 import os, sys
+from multiprocessing.dummy import Pool
+from queue import Queue
 import time
-from shutil import copyfile
+import shutil
 import filecmp
 import logging
 import json
 import shlex
 import signal
 import socket
+import glob
 import getpass
+import traceback
 
 starting_log_message="------------ starting ------------"
 exiting_log_message="------------ exiting ------------"
 finished_log_message="------------ finished ------------"
 
 def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
-    pre_exec_fn = None
-    if real_time:
-        pre_exec_fn = os.setsid
-        single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell, preexec_fn=pre_exec_fn)
-    else:
-        single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell)
-    output = None
-    error = None
-    errorcode = None
-    if real_time:
-        output = ""
-        error = ""
-        subprocess_stdout = None
-        subprocess_stderr = None
-        if single_process.stdout:
-            subprocess_stdout = iter(single_process.stdout.readline, "")
-            for single_line in subprocess_stdout:
-                single_output_line = single_line.rstrip()
-                if single_output_line:
-                    print(single_output_line)
-                    output = output + "\n" + single_output_line
-                    if exiting_log_message in single_output_line or finished_log_message in single_output_line:
-                        single_process.stdout.close()
-                        errorcode = single_process.wait()
-                        return {"output":output,"error":error,"errorcode":errorcode}
-            single_process.stdout.close()
-            errorcode = single_process.wait()
-    if wait:
-        output, error = single_process.communicate()
-        errorcode = single_process.returncode
-    return {"output":output,"error":error,"errorcode":errorcode}
+    try:
+        pre_exec_fn = None
+        if real_time:
+            pre_exec_fn = os.setsid
+            single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell, preexec_fn=pre_exec_fn)
+        else:
+            single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell)
+        output = None
+        error = None
+        errorcode = None
+        if real_time:
+            output = ""
+            error = ""
+            subprocess_stdout = None
+            subprocess_stderr = None
+            if single_process.stdout:
+                subprocess_stdout = iter(single_process.stdout.readline, "")
+                for single_line in subprocess_stdout:
+                    single_output_line = single_line.rstrip()
+                    if single_output_line:
+                        print(single_output_line)
+                        output = output + "\n" + single_output_line
+                        if exiting_log_message in single_output_line or finished_log_message in single_output_line:
+                            single_process.stdout.close()
+                            errorcode = single_process.wait()
+                            return {"output":output,"error":error,"errorcode":errorcode}
+                single_process.stdout.close()
+                errorcode = single_process.wait()
+        if wait:
+            output, error = single_process.communicate()
+            errorcode = single_process.returncode
+        return {"output":output,"error":error,"errorcode":errorcode}
+    except:
+        error = traceback.format_exc()
+        return {"output":None,"error":error,"errorcode":1}
+
 
 def run_command(command,stdout_file,stderr_file,shell,wait):
     if stdout_file and stderr_file:
@@ -60,20 +70,20 @@ def run_command(command,stdout_file,stderr_file,shell,wait):
         if os.path.exists(stderr_file):
             with open(stderr_file,'r') as stderr_log:
                 error_log = stderr_log.read()
-	command_stdout = ""
-	command_stderr = ""
-	if command_output['output']:
-	    command_stdout = command_output['output']
-	if command_output['error']:
-	    command_stderr = command_output['error']
-	if output_log:
-	    command_stdout = command_stdout + "\n----- log stdout -----\n" + output_log
-	if error_log:
-	    command_stderr = command_stderr +  "\n----- log stderr -----\n" + error_log
-	if command_stdout:
-	    print(command_stdout)
-	if command_stderr:
-	    print_error(command_stderr)
+        command_stdout = ""
+        command_stderr = ""
+        if command_output['output']:
+            command_stdout = command_output['output']
+        if command_output['error']:
+            command_stderr = command_output['error']
+        if output_log:
+            command_stdout = command_stdout + "\n----- log stdout -----\n" + output_log
+        if error_log:
+            command_stderr = command_stderr +  "\n----- log stderr -----\n" + error_log
+        if command_stdout:
+            print(command_stdout)
+        if command_stderr:
+            print_error(command_stderr)
         return command_output
     else:
         return run_popen(command,PIPE,PIPE,shell,wait,False)
@@ -357,7 +367,7 @@ def copy_ignore_same_file(first_file,second_file):
         if filecmp.cmp(first_file,second_file):
             pass
     else:
-        copyfile(first_file,second_file)
+        shutil.copyfile(first_file,second_file)
 
 def read_pipeline_settings(pipeline_name, pipeline_version):
     "read the Roslin Pipeline settings"
@@ -413,8 +423,10 @@ def create_file_list(src_dir, glob_patterns):
     return list(set(file_list))
 
 
-def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads, worker_num):
+def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads, worker_num, worker_queue):
     "create a parallel cp command"
+
+
 
     cmds = list()
     groups = list()
@@ -430,77 +442,100 @@ def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads,
 
     if worker_group:
         group_length = len(worker_group)
-        with tempfile.NamedTemporaryFile(delete=False) as file_temp:
-            for filename in worker_group:
-                file_temp.write(filename + "\n")
-            cmd = 'parallel -a ' + file_temp.name + ' -j+' + str(worker_threads) + ' yes | cp {} ' + dst_dir
+        #tempfile.tempdir=tmp_path
+        #with tempfile.NamedTemporaryFile(delete=False) as file_temp:
+        for filename in worker_group:
+            #file_temp.write(filename + "\n")
+            cmd = 'cp {} {}'.format(filename,dst_dir)
+            cmd_obj = {'command':cmd,'queue':worker_queue}
+            cmds.append(cmd_obj)
+            #cmd = 'parallel -a ' + file_temp.name + ' -j+' + str(worker_threads) + ' yes | cp {} ' + dst_dir
 
-    return (cmd, group_length)
+    return cmds
+
+def copy_worker(copy_command_dict):
+    copy_command = copy_command_dict['command']
+    copy_queue = copy_command_dict['queue']
+    copy_process = run_command(shlex.split(copy_command),None,None,False,True)
+    copy_process['command'] = copy_command
+    copy_queue.put(copy_process)
 
 def copy_outputs(params,job_params):
     "copy output files in toil work dir to the final destination"
-    from track_utils import log, find_unique_name_in_dir, old_jobs_folder
-    work_dir = params['work_dir']
-    out_dir = params['out_dir']
-    tmp_dir = params['tmp_dir']
+    from track_utils import log, find_unique_name_in_dir, old_jobs_folder, add_file_handler, ROSLIN_COPY_OUTPUTS_LOG
+    work_dir = params['project_work_dir']
+    tmp_dir = params['work_dir']
     log_path = params['log_folder']
     debug_mode = params['debug_mode']
     output_config = params['copy_outputs_config']
+    out_dir = job_params['copy_output_dir']
     folder_key = job_params['folder_key']
     max_workers = job_params['max_workers']
     worker_num = job_params['worker_num']
     worker_threads = job_params['worker_threads']
-    job_name = job_params['job_name']
-    tmp_folder = "roslin_copy_outputs"
+    job_name = job_params['name']
+    tmp_folder = job_name
     tmp_path = os.path.join(tmp_dir,tmp_folder)
     log_folder = log_path
     if not os.path.exists(tmp_path):
         os.mkdir(tmp_path)
     logger = logging.getLogger(job_name)
-    log_file = "roslin_copy_outputs.log"
-    log_file_path = os.path.join(log_folder,log_file)
-    if os.path.exists(log_file_path):
-        log_error_folder = os.path.join(log_folder,old_jobs_folder)
-        if not os.path.exists(log_error_folder):
-            os.mkdir(log_error_folder)
-        if os.path.exists(log_file_path):
-            archive_log = find_unique_name_in_dir(log_file_path,log_error_folder)
-            log_failed = os.path.join(log_error_folder,archive_log)
-            shutil.move(log_file_path,log_failed)
+    log_file_path = os.path.join(log_folder,ROSLIN_COPY_OUTPUTS_LOG)
     if debug_mode:
         logger.setLevel(logging.DEBUG)
-        add_file_handler(logger,log_path,None,logging.DEBUG)
+        add_file_handler(logger,log_file_path,None,logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-        add_file_handler(logger,log_path,None,logging.INFO)
-
+        add_file_handler(logger,log_file_path,None,logging.INFO)
     folder_data = output_config[folder_key]
-    command_num = 0
+    cmd_list = []
+    worker_queue = Queue()
+    worker_pool = Pool(worker_threads)
     for single_folder_elem in folder_data:
         file_patterns = single_folder_elem["patterns"]
-        if "folder" in single_folder_elem:
-            src_folder = single_folder_elem["folder"]
+        dst_base_dir = os.path.join(out_dir,folder_key)
+        if "input_folder" in single_folder_elem:
+            src_folder = single_folder_elem["input_folder"]
             src_dir = os.path.join(work_dir,src_folder)
         else:
             src_dir = work_dir
-        if "subfolder" in single_folder_elem:
-            dst_folder = single_folder_elem["subfolder"]
-            dst_dir = os.path.join(out_dir,dst_folder)
-            if not os.path.isdir(dst_dir):
-                os.makedirs(dst_dir)
+        if "output_folder" in single_folder_elem:
+            dst_folder = single_folder_elem["output_folder"]
+            dst_dir = os.path.join(dst_base_dir,dst_folder)
         else:
-            dst_dir = out_dir
+            dst_dir = dst_base_dir
+        if not os.path.isdir(dst_dir):
+            os.makedirs(dst_dir)
         file_list = create_file_list(src_dir,file_patterns)
-        file_cmd, group_length = create_parallel_cp_commands(file_list,dst_dir,max_workers,worker_threads,worker_num)
-        if file_cmd != None:
-            copy_info = "[ {} threads: {} ] (Command # {}) Copying {} files from {} to {}\n".format(str(job_name),str(worker_threads),str(command_num),str(group_length),src_dir,dst_dir)
-            log(logger,"info",copy_info)
-            copy_process = run_command_realtime(shlex.split(file_cmd),False)
-            copy_process_ret_code = copy_process['errorcode']
-            if copy_process_ret_code != 0:
-                copy_process_output = copy_process['errorcode']
-                "[ {} threads: {} ] (Command # {}) Failed\n {}".format(str(job_name),str(worker_threads),str(command_num),str(copy_process_output))
-                return copy_process_ret_code
+        single_folder_cmd_list = create_parallel_cp_commands(file_list,dst_dir,max_workers,worker_threads,worker_num,worker_queue)
+        cmd_list.extend(single_folder_cmd_list)
+    group_length = len(cmd_list)
+    copy_info = "[ {} threads: {} ] Copying {} file(s) from {} to {}\n".format(str(job_name),str(worker_threads),str(group_length),src_dir,dst_dir)
+    log(logger,"info",copy_info)
+    if cmd_list:
+        copy_worker(cmd_list[0])
+        try:
+            copy_results = worker_pool.map(copy_worker,cmd_list)
+        except:
+            pass
+        worker_queue.put(None)
+        for single_output in iter(worker_queue.get, None):
+            single_output_errorcode = single_output['errorcode']
+            single_output_command = single_output['command']
+            single_output_str = ""
+            if single_output['output']:
+                single_output_str = single_output['output']
+            if single_output['error']:
+                single_output_str = single_output['error']
+            single_output_id = "[ {} threads: {} ] Command:\n {}\n".format(str(job_name),str(worker_threads),str(single_output_command))
+            if single_output_errorcode != 0:
+                single_output_message = single_output_id + "Failed\n {}".format(str(single_output_str))
+                log(logger,"error",single_output_message)
+                return single_output_errorcode
             else:
-                finished_info = "[ {} threads: {} ] (Command # {}) Finished".format(str(job_name),str(worker_threads),str(command_num))
-                command_num = command_num + 1
+                if debug_mode:
+                    single_output_message = single_output_id + "Finished\n {}".format(str(single_output_str))
+                    log(logger,"debug",single_output_message)
+        worker_pool.close()
+        worker_pool.join()
+    return 0
