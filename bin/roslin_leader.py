@@ -295,6 +295,20 @@ if __name__ == "__main__":
         help="Number of times the piepline can retry failed jobs",
         required=True
     )
+    parser.add_argument(
+        "--output",
+        action="store",
+        dest="copy_output_dir",
+        help="Path to output directory to store results",
+        required=False
+    )
+    parser.add_argument(
+        "--force-overwrite",
+        action="store_true",
+        dest="force_overwrite",
+        help="Force overwrite if output folder already exists",
+        required=False
+    )
 
     options, _ = parser.parse_known_args()
     pipeline_name = options.pipeline_name
@@ -374,7 +388,7 @@ if __name__ == "__main__":
         cwl_batch_system = options.batch_system
     with Toil(options) as toil_obj:
         workflow_failed = False
-        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir}
+        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'copy_output_dir':options.copy_output_dir, 'force_overwrite':options.force_overwrite}
         workflow_params.update(requirements_dict)
         roslin_workflow = roslin_workflow_class(workflow_params)
         clean_up_dict = {'logger':logger,'toil_obj':toil_obj,'track_leader':track_leader,'clean_workflow':clean_workflow,'batch_system':options.batch_system,'uuid':options.project_uuid,'workflow':roslin_workflow}

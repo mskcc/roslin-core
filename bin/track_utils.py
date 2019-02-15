@@ -667,8 +667,8 @@ class RoslinWorkflow(object):
         logger = dill.loads(params['logger'])
         num_groups = int(params['num_groups'])
         num_pairs = int(params['num_pairs'])
-        outputs_path = "/ifs/work/pi/roslin-test/roslin-results" #params['out_dir']
-        overwrite = True#params['force_overwrite']
+        outputs_path = params['copy_output_dir']
+        overwrite = params['force_overwrite']
         project_id = params['project_id']
         job_uuid = params['job_uuid']
         log_folder = params['log_folder']

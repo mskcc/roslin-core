@@ -40,7 +40,7 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode):
+def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, copy_output_dir, force_overwrite):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, construct_run_data_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
@@ -88,6 +88,10 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     "--log-folder",log_folder]
     if cwl_batch_system:
         roslin_leader_command.extend(["--cwl-batch-system",cwl_batch_system])
+    if copy_output_dir:
+        roslin_leader_command.extend(["--output",copy_output_dir])
+    if force_overwrite:
+        roslin_leader_command.append('--force-overwrite')
     if debug_mode:
         roslin_leader_command.append('--debug-mode')
     if test_mode:
@@ -390,6 +394,20 @@ def main():
         help="Path to Project files (to store in database)",
         required=False
     )
+    parser.add_argument(
+        "--output",
+        action="store",
+        dest="copy_output_dir",
+        help="Path to output directory to store results",
+        required=False
+    )
+    parser.add_argument(
+        "--force-overwrite",
+        action="store_true",
+        dest="force_overwrite",
+        help="Force overwrite if output folder already exists",
+        required=False
+    )
 
     params, _ = parser.parse_known_args()
     roslin_workflow_class = getattr(roslin_workflows,params.workflow_name)
@@ -416,6 +434,10 @@ def main():
     inputs_yaml_basename = os.path.basename(inputs_yaml)
     if not os.path.exists(inputs_yaml):
         print_error("ERROR: Could not find "+inputs_yaml)
+        sys.exit(1)
+
+    if params.force_overwrite and not params.copy_output_dir:
+        print_error("ERROR: You need to specify an output directory to force overwrite")
         sys.exit(1)
 
     work_base_dir = os.path.abspath(pipeline_settings["ROSLIN_PIPELINE_OUTPUT_PATH"])
@@ -483,7 +505,7 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode)
+    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.copy_output_dir, params.force_overwrite)
 
 if __name__ == "__main__":
 
