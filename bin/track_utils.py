@@ -44,9 +44,9 @@ MONGO_DATABASE = os.environ['ROSLIN_MONGO_DATABASE']
 MONGO_USERNAME = os.environ['ROSLIN_MONGO_USERNAME']
 MONGO_PASSWORD = os.environ['ROSLIN_MONGO_PASSWORD']
 mongo_username_and_password = ''
-if check_if_env_is_empty(MONGO_USERNAME):
+if not check_if_env_is_empty(MONGO_USERNAME):
     mongo_username_and_password = str(MONGO_USERNAME)
-if check_if_env_is_empty(MONGO_PASSWORD):
+if not check_if_env_is_empty(MONGO_PASSWORD):
     mongo_username_and_password = mongo_username_and_password + ":" + str(MONGO_PASSWORD)
 if mongo_username_and_password:
     mongo_username_and_password = mongo_username_and_password + "@"
@@ -57,7 +57,14 @@ PROJECTS_COLLECTION = "Projects"
 RUN_PROFILES_COLLECTION = "RunProfiles"
 RUN_DATA_COLLECTION = "RunData"
 ROSLIN_COPY_OUTPUTS_LOG = "roslin_copy_outputs.log"
-client = MongoClient(MONGO_URL, connect=False)
+disable_mongo_logging = False
+client = None
+if 'ROSLIN_MONGO_DISABLE' in os.environ:
+    ROSLIN_MONGO_DISABLE = os.environ['ROSLIN_MONGO_DISABLE']
+    if not check_if_env_is_empty(ROSLIN_MONGO_DISABLE):
+        disable_mongo_logging = True
+if not disable_mongo_logging:
+    client = MongoClient(MONGO_URL, connect=False)
 
 copy_outputs_resource_config = {"bam": (None, 4), "vcf": (None, 3), "maf": (1,2) , "qc": (2,2), "log": (1,1), "inputs": (1,1), "facets": (1,1)}
 
@@ -164,11 +171,12 @@ def make_mongo_safe_dict(logger,dict_obj):
     return dict_obj
 
 def get_db_and_doc_query(logger,collection_name,project_uuid):
-    db = client[MONGO_DATABASE]
-    collection = get_mongo_collection(logger,collection_name)
-    single_doc_id = project_uuid
-    single_doc_query = {index_key: single_doc_id}
-    return db,single_doc_query
+    if client:
+        db = client[MONGO_DATABASE]
+        collection = get_mongo_collection(logger,collection_name)
+        single_doc_id = project_uuid
+        single_doc_query = {index_key: single_doc_id}
+        return db,single_doc_query
 
 ### logging wrappers ###
 
