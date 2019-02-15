@@ -358,9 +358,9 @@ def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
 
 def check_if_env_is_empty(env_value):
     if env_value and env_value != 'None':
-        return True
-    else:
         return False
+    else:
+        return True
 
 def copy_ignore_same_file(first_file,second_file):
     if os.path.exists(second_file):
