@@ -195,49 +195,6 @@ def targzip_project_files(project_id, project_path):
     return input_files
 
 
-'''def convert_examples_to_use_abs_path(inputs_yaml_path):
-    "convert example inputs.yaml to use absolute path"
-
-    current_directory = os.getcwd()
-    inputs_yaml_directory = os.path.dirname(inputs_yaml_path)
-    os.chdir(inputs_yaml_directory)
-
-    output = []
-
-    # fixme: best way is to look for:
-    #   class: File
-    #   path: ../abc/def/123.fastq
-    with open(inputs_yaml_path, "r") as yaml_file:
-        lines = yaml_file.readlines()
-        prev_line = ""
-        for line in lines:
-            line = line.rstrip("\n")
-
-            # if "class: File" in prev_line:
-            #     # fixme: pre-compile
-            #     # path: ../ or path: ./
-            #     pattern = r"path: (\.\.?/.*)"
-            #     match = re.search(pattern, line)
-            #     if match:
-            #         path = os.path.abspath(match.group(1))
-            #         line = re.sub(pattern, "path: {}".format(path), line)
-
-            # fixme: pre-compile
-            # path: ../ or path: ./
-            pattern = r"path: (\.\.?/.*)"
-            match = re.search(pattern, line)
-            if match:
-                path = os.path.abspath(match.group(1))
-                line = re.sub(pattern, "path: {}".format(path), line)
-
-            output.append(line)
-            prev_line = line
-
-    with open(inputs_yaml_path, "w") as yaml_file:
-        yaml_file.write("\n".join(output))
-
-    os.chdir(current_directory)'''
-
 def get_pipeline_name_and_versions():
     pipelines = {}
     for single_pipeline_dir in os.listdir(ROSLIN_CORE_CONFIG_PATH):
