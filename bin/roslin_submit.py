@@ -23,7 +23,7 @@ def bsub(bsubline):
     process = subprocess.Popen(bsubline, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = process.stdout.readline()
 
-    # Expected output looks like: Job <26552430> is submitted to queue <controlR>.
+    # Expected output looks like: Job <26552430> is submitted to queue <sol>.
     if re.match(r'Job <\d+> is submitted', output) is not None:
         lsf_job_id = int(output.strip().split()[1].strip('<>'))
     else:
@@ -37,14 +37,16 @@ def submit_to_lsf(cmo_project_id, job_uuid, work_dir, pipeline_name_version, lea
     "submit roslin-runner to the w node"
 
     batch_system = "lsf"
-    node_request = ['-q', leader_node]
-    # to use largeHG nodes, we don't have a queue, we have to request >376GB of RAM
-    if leader_node == 'largeHG':
-        node_request = ['-M', '512']
-    # to submit short jobs, specify estimated run time as 59 minutes or less
+    node_request = ['-M', '16']
+    # to use one of the large nodes with plenty of RAM, request >376GB of RAM
+    if leader_node == 'large':
+        node_request = ['-M', '400']
+    # to submit short jobs, specify estimated run time as 1hr 59mins or less
     elif leader_node == 'short':
-        node_request = ['-We', '0:59']
-
+        node_request = node_request + ['-We', '1:59']
+    # to use one of the nodes with internet access, use -R [internet] for bsub
+    elif leader_node == 'internet':
+        node_request = node_request + ['-R', '[internet]']
     # if a single-node was requested, use roslin-runner in singleMachine mode
     if single_node:
         batch_system = "singleMachine"
@@ -310,20 +312,20 @@ def main():
         help="jobstore uuid for restart",
         required=False
     )
-
-    parser.add_argument("--leader-node",
+    parser.add_argument(
+        "--leader-node",
         action="store",
         dest="leader_node",
-        choices=['controlR', 'control', 'largeHG', 'short'],
-        default="controlR",
-        help="The LSF node for the leader job. Default: controlR",
-        required=False)
-
+        choices=['large', 'short', 'internet'],
+        help="The LSF node for the leader job.",
+        required=False
+    )
     parser.add_argument(
         "--single-node",
         action="store_true",
         dest="single_node",
-        help="Run the runner in singleMachine mode (Recommend setting --leader-node largeHG)"
+        help="Run the runner in singleMachine mode (Recommend setting --leader-node large)"
+
     )
 
     parser.add_argument(
