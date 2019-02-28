@@ -453,6 +453,12 @@ def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads,
 
     return cmds
 
+def check_if_argument_file_exists(argument_value):
+    if argument_value:
+        if not os.path.exists(argument_value):
+            print_error("ERROR: Could not find " + argument_value)
+            sys.exit(1)
+
 def copy_worker(copy_command_dict):
     copy_command = copy_command_dict['command']
     copy_queue = copy_command_dict['queue']
