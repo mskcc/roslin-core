@@ -22,7 +22,7 @@ if 'ROSLIN_CORE_BIN_PATH' not in os.environ:
 ROSLIN_CORE_BIN_PATH = os.environ['ROSLIN_CORE_BIN_PATH']
 ROSLIN_CORE_CONFIG_PATH = os.environ['ROSLIN_CORE_CONFIG_PATH']
 sys.path.append(ROSLIN_CORE_BIN_PATH)
-from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal
+from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists
 
 MB_SIZE = (float(1024) ** 2)
 MAX_META_FILE_SIZE = 5 * MB_SIZE
@@ -40,7 +40,7 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, copy_output_dir, force_overwrite):
+def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, construct_run_data_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
@@ -103,6 +103,14 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     if restart:
         roslin_leader_command.append('--restart')
         user_event_name = "restart"
+    if on_start:
+        roslin_leader_command.append('--on_start', on_start)
+    if on_complete:
+        roslin_leader_command.append('--on-complete', on_complete)
+    if on_fail:
+        roslin_leader_command.append('--on-fail', on_fail)
+    if on_success:
+        roslin_leader_command.append('--on-success', on_success)
     leader_job_store = jobstore_uuid
     leader_job_store_path = "file:" + os.path.join(roslin_leader_tmp_path,leader_job_store)
     roslin_leader_command.append(leader_job_store_path)
@@ -352,21 +360,59 @@ def main():
         required=False
     )
     parser.add_argument(
-        "--output",
+        "--results",
         action="store",
-        dest="copy_output_dir",
-        help="Path to output directory to store results",
+        dest="results_dir",
+        help="Path to the directory to store results",
         required=False
     )
     parser.add_argument(
-        "--force-overwrite",
+        "--force-overwrite-results",
         action="store_true",
-        dest="force_overwrite",
-        help="Force overwrite if output folder already exists",
+        dest="force_overwrite_results",
+        help="Force overwrite if results folder already exists",
+        required=False
+    )
+    parser.add_argument(
+        "--on-start",
+        action="store",
+        dest="on_start",
+        help="Python script to run when the workflow starts",
+        required=False
+    )
+    parser.add_argument(
+        "--on-complete",
+        action="store",
+        dest="on_complete",
+        help="Python script to run when the workflow completes (either fail or succeed)",
+        required=False
+    )
+    parser.add_argument(
+        "--on-fail",
+        action="store",
+        dest="on_fail",
+        help="Python script to run when the workflow fails",
+        required=False
+    )
+    parser.add_argument(
+        "--on-success",
+        action="store",
+        dest="on_success",
+        help="Python script to run when the workflow succeeds",
         required=False
     )
 
     params, _ = parser.parse_known_args()
+    check_if_argument_file_exists(params.on_start)
+    check_if_argument_file_exists(params.on_complete)
+    check_if_argument_file_exists(params.on_fail)
+    check_if_argument_file_exists(params.on_success)
+    check_if_argument_file_exists(params.inputs_yaml)
+    on_start_abspath = os.path.abspath(params.on_start)
+    on_complete_abspath = os.path.abspath(params.on_complete)
+    on_fail_abspath = os.path.abspath(params.on_fail)
+    on_success_abspath = os.path.abspath(params.on_success)
+    inputs_yaml = os.path.abspath(params.inputs_yaml)
     roslin_workflow_class = getattr(roslin_workflows,params.workflow_name)
     roslin_workflow = roslin_workflow_class(None)
     workflow_parser = argparse.ArgumentParser(parents=[ parser ], add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -380,18 +426,14 @@ def main():
             workflow_param_value = workflow_params.__dict__[workflow_param_key]
             if is_path:
                 if not os.path.exists(workflow_param_value):
-                    print_error("ERROR: Could not fine "+ str(workflow_param_value))
+                    print_error("ERROR: Could not find "+ str(workflow_param_value))
                     sys.exit(1)
                 workflow_param_value = os.path.abspath(workflow_param_value)
             requirements_dict[workflow_param_key] = (workflow_param_value, parser_option)
     project_id = params.project_id
-    inputs_yaml = os.path.abspath(params.inputs_yaml)
     restart_job_uuid = params.restart_job_uuid
     inputs_yaml_dirname = os.path.dirname(inputs_yaml)
     inputs_yaml_basename = os.path.basename(inputs_yaml)
-    if not os.path.exists(inputs_yaml):
-        print_error("ERROR: Could not find "+inputs_yaml)
-        sys.exit(1)
 
     if params.force_overwrite and not params.copy_output_dir:
         print_error("ERROR: You need to specify an output directory to force overwrite")
@@ -462,7 +504,7 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.copy_output_dir, params.force_overwrite)
+    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, on_start_abspath, on_complete_abspath, on_fail_abspath, on_success_abspath)
 
 if __name__ == "__main__":
 
