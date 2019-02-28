@@ -76,7 +76,7 @@ def get_mongo_collection(logger,collection_name):
             db[collection_name].create_index(index_key)
             return db[collection_name]
         except ConnectionFailure:
-            error_message = "Failed to get collection "+ collection_name
+            error_message = "Failed to get collection "+ collection_name + "\n" + traceback.format_exc()
             log(logger,"error",error_message)
 
 def get_mongo_document(logger,collection_name,project_uuid):
@@ -86,7 +86,7 @@ def get_mongo_document(logger,collection_name,project_uuid):
             single_doc = db[collection_name].find_one(single_doc_query)
             return single_doc
         except ConnectionFailure:
-            error_message = "Failed to update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name
+            error_message = "Failed to update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name + "\n" + traceback.format_exc()
             log(logger,"error",error_message)
 
 def update_mongo_document(logger,collection_name,project_uuid,updated_document):
@@ -104,7 +104,7 @@ def update_mongo_document(logger,collection_name,project_uuid,updated_document):
                         mongo_doc_id = db[collection_name].update_one(filter=single_doc_query, update={"$set":mongo_safe_dict})
                 return mongo_doc_id
             except ConnectionFailure:
-                error_message = "Failed to connect and update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name
+                error_message = "Failed to connect and update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name + "\n" + traceback.format_exc()
                 log(logger,"error",error_message)
             except:
                 error_message = "Failed to update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name + "\n" + str(mongo_safe_dict) + "\n" + traceback.format_exc()
