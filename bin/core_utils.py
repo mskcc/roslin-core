@@ -474,7 +474,7 @@ def copy_outputs(params,job_params):
     log_path = params['log_folder']
     debug_mode = params['debug_mode']
     output_config = params['copy_outputs_config']
-    out_dir = job_params['copy_output_dir']
+    out_dir = params['results_dir']
     folder_key = job_params['folder_key']
     max_workers = job_params['max_workers']
     worker_num = job_params['worker_num']
