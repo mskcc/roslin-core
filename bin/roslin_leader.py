@@ -2,7 +2,7 @@
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event
-from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message
+from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists
 from toil.common import Toil
 from toil.job import Job, JobNode
 from toil.leader import FailedJobsException
@@ -295,22 +295,55 @@ if __name__ == "__main__":
         help="Number of times the piepline can retry failed jobs",
         required=True
     )
-    parser.add_argument(
-        "--output",
+    parser_project_options.add_argument(
+        "--project-results",
         action="store",
-        dest="copy_output_dir",
-        help="Path to output directory to store results",
+        dest="project_results",
+        help="Path to the output directory to store results",
         required=False
     )
     parser.add_argument(
-        "--force-overwrite",
+        "--force-overwrite-results",
         action="store_true",
-        dest="force_overwrite",
-        help="Force overwrite if output folder already exists",
+        dest="force_overwrite_results",
+        help="Force overwrite if results folder already exists",
+        required=False
+    )
+    parser.add_argument(
+        "--on-start",
+        action="store",
+        dest="on_start",
+        help="Python script to run when the workflow starts",
+        required=False
+    )
+    parser.add_argument(
+        "--on-complete",
+        action="store",
+        dest="on_complete",
+        help="Python script to run when the workflow completes (either fail or succeed)",
+        required=False
+    )
+    parser.add_argument(
+        "--on-fail",
+        action="store",
+        dest="on_fail",
+        help="Python script to run when the workflow fails",
+        required=False
+    )
+    parser.add_argument(
+        "--on-success",
+        action="store",
+        dest="on_success",
+        help="Python script to run when the workflow succeeds",
         required=False
     )
 
     options, _ = parser.parse_known_args()
+    check_if_argument_file_exists(options.on_start)
+    check_if_argument_file_exists(options.on_complete)
+    check_if_argument_file_exists(options.on_fail)
+    check_if_argument_file_exists(options.on_success)
+    check_if_argument_file_exists(options.inputs_yaml)
     pipeline_name = options.pipeline_name
     pipeline_version = options.pipeline_version
     log_folder = options.log_folder
