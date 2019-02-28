@@ -129,7 +129,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     current_time = get_current_time()
     with open(inputs_yaml) as input_yaml_file:
         input_yaml_data = safe_load(input_yaml_file)
-    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"output_dir":roslin_output_path,"project_id":project_id,"project_uuid":project_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version}
+    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"project_output_dir":roslin_output_path,"project_results_dir":workflow_results_path,"project_id":project_id,"project_uuid":project_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version,"workflow":workflow_name}
     with open("submission.json","w") as submission_file:
         json.dump(submission_dict,submission_file)
     if not restart:
