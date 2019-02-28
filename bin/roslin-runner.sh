@@ -231,6 +231,7 @@ cwltoil \
     --no-container \
     --not-strict \
     --disableCaching \
+    --disableChaining \
     --cleanWorkDir never \
     --realTimeLogging \
     --maxLogFileSize 0 \
