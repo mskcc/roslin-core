@@ -31,7 +31,6 @@ import yaml
 import copy
 import traceback
 import re
-
 time_format="%Y-%m-%d %H:%M:%S"
 log_format="(%(current_time)s) [%(name)s:%(levelname)s] %(message)s"
 termination_file_name = "killed-by-user.json"
