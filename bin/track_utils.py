@@ -629,6 +629,7 @@ class RoslinWorkflow(object):
         params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
         workflow_name = params['workflow_name']
         log_folder = params['log_folder']
+        params['configure'] = {}
         if 'logger' not in params:
             if params['debug_mode']:
                 logging_level = logging.DEBUG
@@ -640,7 +641,7 @@ class RoslinWorkflow(object):
             logger.setLevel(logging_level)
             add_file_handler(logger,log_path,None,logging_level)
             params['logger'] = dill.dumps(logger)
-            self.log_file = log_path
+            params['log_file'] = log_path
         self.jobs = {}
         self.params = params
         self.configure()
@@ -650,7 +651,8 @@ class RoslinWorkflow(object):
         if 'workflows' not in params:
             self.params['workflows'] = {}
         if 'copy_outputs_config' not in params:
-            self.params['copy_outputs_config'] = {"log": [{"patterns": ["*.log"], "input_folder": "log"}],
+            self.params['copy_outputs_config'] = {"log": [{"patterns": ["*.log"], "input_folder": "log"},
+                                                          {"patterns": ["*.json"], "input_folder": "log"}],
                                                "inputs": [{"patterns": ["*.yaml","*.txt"] }]}
 
     def get_workflow_info(self):
