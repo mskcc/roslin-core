@@ -11,17 +11,15 @@ OPTIONS:
    -v      Pipeline name/version
    -u      Username you want to configure a workplace for
    -f      Overwrite workspace even if it already exists
-   -s      Convert examples to run in singleMachine mode
    -z      Display installed pipeline name/version
 
 EXAMPLE:
 
-   `basename $0` -v variant/1.0.0 -u chunj
+   `basename $0` -v roslin-variant/2.5.0 -u nikhil
 
 EOF
 }
 
-use_single_machine_example=0
 force_overwrite=0
 
 while getopts “v:u:sfzh” OPTION
@@ -83,12 +81,6 @@ mkdir -p ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id}
 # copy jumpstart examples
 tar xzf ${ROSLIN_PIPELINE_WORKSPACE_PATH}/examples.tgz -C ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id} --strip-components 1
 
-# switch to singleMachine if requested
-if [ "$use_single_machine_example" -eq 1 ]
-then
-    find ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id}/ -name "run-example.sh" | xargs -I {} sed -i "s/lsf/singleMachine/g" {}
-fi
-
 cat << "EOF"
 
  ______     ______     ______     __         __     __   __
@@ -112,4 +104,3 @@ echo "Add the following three lines to your .profile or .bashrc if not already a
 echo
 echo "source ${ROSLIN_CORE_CONFIG_PATH}/settings.sh"
 echo "export PATH=\${ROSLIN_CORE_BIN_PATH}:\$PATH"
-echo "export TOIL_LSF_ARGS=-S 1"
