@@ -135,6 +135,7 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     project_id = workflow_params['project_id']
     pipeline_name = workflow_params['pipeline_name']
     pipeline_version = workflow_params['pipeline_version']
+    workflow_log_file = workflow_params['log_file']
     run_attempt = int(workflow_params['run_attempt'])
     roslin_track = RoslinTrack(job_store_path,job_uuid,work_dir,tmp_dir,restart,run_attempt,logger)
     #job_store_obj = ReadOnlyFileJobStore(job_store_path)
@@ -144,7 +145,6 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     job_info = {}
     retry_failed_jobs = []
     retry_jobs = []
-    workflow_log_file = roslin_workflow.log_file
     log_file_positon = 0
     started = False
     job_status = {}
@@ -394,6 +394,7 @@ if __name__ == "__main__":
     else:
         run_attempt = 0
     inputs_yaml = options.inputs_yaml
+    input_yaml_data = None
     if os.path.exists(inputs_yaml):
         with open(inputs_yaml) as input_yaml_file:
             input_yaml_data = safe_load(input_yaml_file)
@@ -427,9 +428,13 @@ if __name__ == "__main__":
         cwl_batch_system = options.batch_system
     with Toil(options) as toil_obj:
         workflow_failed = False
-        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'copy_output_dir':options.copy_output_dir, 'force_overwrite':options.force_overwrite}
+        workflow_params_path = os.path.join(workdir,"workflow_params.json")
+        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'results_dir':options.project_results, 'force_overwrite_results':options.force_overwrite_results, 'inputs': input_yaml_data, 'workflow_params_path': workflow_params_path, 'on_start': options.on_start, 'on_complete': options.on_complete, 'on_fail': options.on_fail, 'on_success': options.on_success, 'env':dict(os.environ)}
         workflow_params.update(requirements_dict)
         roslin_workflow = roslin_workflow_class(workflow_params)
+        roslin_workflow_params = roslin_workflow.params
+        with open(workflow_params_path,"w") as workflow_params_file:
+            json.dump(roslin_workflow_params,workflow_params_file)
         clean_up_dict = {'logger':logger,'toil_obj':toil_obj,'track_leader':track_leader,'clean_workflow':clean_workflow,'batch_system':options.batch_system,'uuid':options.project_uuid,'workflow':roslin_workflow}
         signal.signal(signal.SIGINT, partial(cleanup, clean_up_dict))
         signal.signal(signal.SIGTERM, partial(cleanup, clean_up_dict))
