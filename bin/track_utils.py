@@ -877,15 +877,51 @@ class RoslinWorkflow(object):
     def add_requirement(self,parser):
         pass
     def on_start(self):
-        pass
+        self.run_hook("on_start","on start")
+
     def run_pipeline(self):
         pass
     def on_complete(self):
-        pass
+        self.run_hook("on_complete","on complete")
     def on_fail(self):
-        pass
+        self.run_hook("on_fail","on fail")
     def on_success(self):
-        pass
+        self.run_hook("on_success","on success")
+
+    def run_hook(self,hook_key, hook_name):
+        params = self.params
+        if params[hook_key]:
+            script_path = params[hook_key]
+            logger = dill.loads(params['logger'])
+            log(logger,'info',"Running " + hook_name + " Python hook")
+            self.run_python_hook(script_path)
+
+    def run_python_hook(self,path):
+        params = self.params
+        logger = dill.loads(params['logger'])
+        script_basename = os.path.basename(path)
+        info_message = "Running python hook: " + script_basename
+        debug_message = "Script location: " + path
+        log(logger,'info',info_message)
+        log(logger,'debug',debug_message)
+        input_data = self.params['workflow_params_path']
+        python_hook_command = ["python",path,"--data",input_data]
+        hook_process = run_command(copy_command,None,None,False,True)
+        output_message = ""
+        error_message = ""
+        if hook_process['output']:
+            output_message = "----- log stdout -----\n {}".format(hook_process['output'])
+        if hook_process['error']:
+            error_message = "----- log stderr -----\n {}",format(hook_process['error'])
+        if hook_process['errorcode'] != 0:
+            error_message = error_message + "\nPython hook ( {} ) Failed, errorcode: {}".format(script_basename,str(hook_process['errorcode']))
+        else:
+            output_message = output_message + "\nPython hook ( {} ) Done".format(script_basename)
+        if output_message:
+            log(logger,'info',output_message)
+        if error_message:
+            log(logger,'error',error_message)
+
 
 class ReadOnlyFileJobStore(FileJobStore):
 
