@@ -477,7 +477,7 @@ def construct_run_data_doc(job_uuid,jobstore_uuid,pipeline_version,project_id):
     }
     return run_data
 
-def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow, input_files, restart):
+def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow, input_files, restart, project_results):
 
     project_collection = get_mongo_collection(logger,PROJECTS_COLLECTION)
     previous_projects = project_collection.find({'projectId':project_id})
@@ -491,6 +491,7 @@ def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, pr
         "pipelineJobId": job_uuid,
         "jobstoreId": jobstore_uuid,
         "workflow": workflow,
+        "results": project_results,
         "dateSubmitted": get_current_time(),
         "pipelineName": pipeline_name,
         "pipelineVersion": pipeline_version,
@@ -671,58 +672,59 @@ class RoslinWorkflow(object):
 
     def copy_workflow_outputs(self,last_workflow_job):
         params = self.params
-        logger = dill.loads(params['logger'])
-        num_groups = int(params['num_groups'])
-        num_pairs = int(params['num_pairs'])
-        outputs_path = params['copy_output_dir']
-        overwrite = params['force_overwrite']
-        project_id = params['project_id']
-        job_uuid = params['job_uuid']
-        log_folder = params['log_folder']
-        workflow_output_folder = project_id+"."+job_uuid
-        workflow_output_path = os.path.join(outputs_path,workflow_output_folder)
-        if os.path.exists(workflow_output_path):
-            if not overwrite:
-                error_message = workflow_output_path + " already exists, please add the --force_overwrite flag to overwrite"
-                log(logger,"error",error_message)
-            else:
-                info_message = "Removing folder: " + workflow_output_path
-                log(logger,"info",info_message)
-                shutil.rmtree(workflow_output_path)
-        os.mkdir(workflow_output_path)
-        log_file = ROSLIN_COPY_OUTPUTS_LOG
-        log_file_path = os.path.join(log_folder,log_file)
-        if os.path.exists(log_file_path):
-            log_error_folder = os.path.join(log_folder,old_jobs_folder)
-            if not os.path.exists(log_error_folder):
-                os.mkdir(log_error_folder)
-            archive_log = find_unique_name_in_dir(log_file_path,log_error_folder)
-            log_failed = os.path.join(log_error_folder,archive_log)
-            shutil.move(log_file_path,log_failed)
-        copy_outputs_config = params['copy_outputs_config']
-        for single_key in copy_outputs_resource_config.keys():
-            if single_key not in copy_outputs_config:
-                continue
-            num_workers, num_threads = copy_outputs_resource_config[single_key]
-            job_params = self.set_default_job_params()
-            job_params['copy_output_dir'] = workflow_output_path
-            job_params['folder_key'] = single_key
-            if single_key == 'bam':
-                num_workers = num_groups
-            if single_key == 'vcf':
-                num_workers = num_pairs
-            job_params['max_workers'] = num_workers
-            job_params['worker_threads'] = num_threads
-            job_params['cores'] = num_threads
-            job_params['memory'] = '2G'
-            for single_worker_num in range(0,num_workers):
-                worker_job_params = copy.deepcopy(job_params)
-                job_name = "roslin_copy_outputs_"+single_key+"_"+str(single_worker_num)
-                worker_job_params['name'] = job_name
-                worker_job_params['worker_num'] = single_worker_num
-                roslin_job_obj = RoslinJob(copy_outputs,params,worker_job_params)
-                roslin_job_obj.__dict__['jobName'] = job_name
-                last_workflow_job.addFollowOn(roslin_job_obj)
+        results_path = params['results_dir']
+        if results_path:
+            logger = dill.loads(params['logger'])
+            num_groups = int(params['num_groups'])
+            num_pairs = int(params['num_pairs'])
+            restart = params['restart']
+            results_overwrite = params['force_overwrite_results']
+            project_id = params['project_id']
+            job_uuid = params['job_uuid']
+            log_folder = params['log_folder']
+            if os.path.exists(results_path) and not restart:
+                if not results_overwrite:
+                    error_message = results_path + " already exists, please add the --force_overwrite flag to overwrite"
+                    log(logger,"error",error_message)
+                    sys.exit(1)
+                else:
+                    info_message = "Removing folder: " + results_path
+                    log(logger,"info",info_message)
+                    shutil.rmtree(results_path)
+            os.mkdir(results_path)
+            log_file = ROSLIN_COPY_OUTPUTS_LOG
+            log_file_path = os.path.join(log_folder,log_file)
+            if os.path.exists(log_file_path):
+                log_error_folder = os.path.join(log_folder,old_jobs_folder)
+                if not os.path.exists(log_error_folder):
+                    os.mkdir(log_error_folder)
+                archive_log = find_unique_name_in_dir(log_file_path,log_error_folder)
+                log_failed = os.path.join(log_error_folder,archive_log)
+                shutil.move(log_file_path,log_failed)
+            copy_outputs_config = params['copy_outputs_config']
+            for single_key in copy_outputs_resource_config.keys():
+                if single_key not in copy_outputs_config:
+                    continue
+                num_workers, num_threads = copy_outputs_resource_config[single_key]
+                job_params = self.set_default_job_params()
+                job_params['copy_output_dir'] = results_path
+                job_params['folder_key'] = single_key
+                if single_key == 'bam':
+                    num_workers = num_groups
+                if single_key == 'vcf':
+                    num_workers = num_pairs
+                job_params['max_workers'] = num_workers
+                job_params['worker_threads'] = num_threads
+                job_params['cores'] = num_threads
+                job_params['memory'] = '2G'
+                for single_worker_num in range(0,num_workers):
+                    worker_job_params = copy.deepcopy(job_params)
+                    job_name = "roslin_copy_outputs_"+single_key+"_"+str(single_worker_num)
+                    worker_job_params['name'] = job_name
+                    worker_job_params['worker_num'] = single_worker_num
+                    roslin_job_obj = RoslinJob(copy_outputs,params,worker_job_params)
+                    roslin_job_obj.__dict__['jobName'] = job_name
+                    last_workflow_job.addFollowOn(roslin_job_obj)
         return last_workflow_job
 
     def add_requirement(self,parser):
