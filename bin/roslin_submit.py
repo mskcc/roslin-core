@@ -50,6 +50,10 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     roslin_tmp_path = os.path.join(roslin_bin_path,'tmp')
     roslin_leader_tmp_path = os.path.join(roslin_work_path,'leader')
     submission_log_path = os.path.join(log_folder,submission_file_name)
+    workflow_results_path = None
+    if results_dir:
+        workflow_results_folder = project_id+"."+project_uuid
+        workflow_results_path = os.path.join(results_dir,workflow_results_folder)
     run_attempt = 0
     if not os.path.exists(log_folder):
         os.mkdir(log_folder)
@@ -88,10 +92,10 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     "--log-folder",log_folder]
     if cwl_batch_system:
         roslin_leader_command.extend(["--cwl-batch-system",cwl_batch_system])
-    if copy_output_dir:
-        roslin_leader_command.extend(["--output",copy_output_dir])
-    if force_overwrite:
-        roslin_leader_command.append('--force-overwrite')
+    if results_dir:
+        roslin_leader_command.extend(["--project-results",workflow_results_path])
+    if force_overwrite_results:
+        roslin_leader_command.append('--force-overwrite-results')
     if debug_mode:
         roslin_leader_command.append('--debug-mode')
     if test_mode:
@@ -129,7 +133,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     with open("submission.json","w") as submission_file:
         json.dump(submission_dict,submission_file)
     if not restart:
-        project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart)
+        project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart, workflow_results_path)
         run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
         run_data_doc = construct_run_data_doc(project_uuid, jobstore_uuid, pipeline_version, project_id)
         update_project_doc(logger,project_uuid,project_doc)
@@ -143,6 +147,8 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     add_user_event(logger,project_uuid,submission_dict,user_event_name)
     running_command_template =  "Running workflow ( {} ) of Roslin {} [ version {} ] on {}\nProject: {} [{}]\nOutput: {}\nLogs: {}"
     running_command_str = running_command_template.format(workflow_name,pipeline_name,pipeline_version,batch_system,project_id,project_uuid,roslin_output_path,log_folder)
+    if workflow_results_path:
+        running_command_str = running_command_str + "\nResults: {}".format(workflow_results_path)
     with open(submission_log_path,"w") as submission_file:
         json.dump(submission_dict,submission_file)
     if foreground_mode:
