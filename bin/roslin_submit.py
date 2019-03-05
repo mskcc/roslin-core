@@ -141,6 +141,7 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
         update_run_result_doc(logger,job_uuid,run_results_doc)
         update_run_data_doc(logger,job_uuid,run_data_doc)
         update_latest_project(logger,job_uuid,project_id)
+        update_run_profile_doc(logger,job_uuid,run_profile_doc)
         user_event_name = "submit"
     else:
         update_run_results_restart(logger,job_uuid,current_time)
