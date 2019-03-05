@@ -20,5 +20,7 @@ export ROSLIN_MONGO_USERNAME="{{ core_mongo_username }}"
 export ROSLIN_MONGO_PASSWORD="{{ core_mongo_password }}"
 
 export PATH=$ROSLIN_CORE_BIN_PATH:$PATH
+export PATH=$ROSLIN_CORE_BIN_PATH/install:$PATH
+export PATH=$ROSLIN_CORE_BIN_PATH/sing:$PATH
 
 echo "Loaded Roslin Core Version ( $ROSLIN_CORE_VERSION )"
