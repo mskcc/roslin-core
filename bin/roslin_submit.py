@@ -40,8 +40,8 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success):
-    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, construct_run_data_doc
+def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success):
+    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, update_run_profile_doc, construct_run_data_doc, construct_run_profile_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
     roslin_bin_path = pipeline_settings['ROSLIN_PIPELINE_BIN_PATH']
@@ -52,7 +52,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     submission_log_path = os.path.join(log_folder,submission_file_name)
     workflow_results_path = None
     if results_dir:
-        workflow_results_folder = project_id+"."+project_uuid
+        workflow_results_folder = project_id+"."+job_uuid
         workflow_results_path = os.path.join(results_dir,workflow_results_folder)
     run_attempt = 0
     if not os.path.exists(log_folder):
@@ -77,7 +77,7 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     roslin_leader_command = ["roslin_leader.py",
     "--id",project_id,
     "--jobstore-id",jobstore_uuid,
-    "--uuid",project_uuid,
+    "--uuid",job_uuid,
     "--inputs",inputs_yaml,
     "--project-output",roslin_output_path,
     "--project-workdir",roslin_work_path,
@@ -129,30 +129,31 @@ def submit(project_id, project_uuid, project_path, pipeline_name, pipeline_versi
     current_time = get_current_time()
     with open(inputs_yaml) as input_yaml_file:
         input_yaml_data = safe_load(input_yaml_file)
-    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"project_output_dir":roslin_output_path,"project_results_dir":workflow_results_path,"project_id":project_id,"project_uuid":project_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version,"workflow":workflow_name}
+    submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"project_output_dir":roslin_output_path,"project_results_dir":workflow_results_path,"project_id":project_id,"job_uuid":job_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version,"workflow":workflow_name}
     with open("submission.json","w") as submission_file:
         json.dump(submission_dict,submission_file)
     if not restart:
-        project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart, workflow_results_path)
-        run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, project_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
-        run_data_doc = construct_run_data_doc(project_uuid, jobstore_uuid, pipeline_version, project_id)
-        update_project_doc(logger,project_uuid,project_doc)
-        update_run_result_doc(logger,project_uuid,run_results_doc)
-        update_run_data_doc(logger,project_uuid,run_data_doc)
-        update_latest_project(logger,project_uuid,project_id)
+        project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart, workflow_results_path)
+        run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
+        run_data_doc = construct_run_data_doc(job_uuid, jobstore_uuid, pipeline_version, project_id)
+        run_profile_doc = construct_run_profile_doc(logger,job_uuid,pipeline_settings)
+        update_project_doc(logger,job_uuid,project_doc)
+        update_run_result_doc(logger,job_uuid,run_results_doc)
+        update_run_data_doc(logger,job_uuid,run_data_doc)
+        update_latest_project(logger,job_uuid,project_id)
         user_event_name = "submit"
     else:
-        update_run_results_restart(logger,project_uuid,current_time)
+        update_run_results_restart(logger,job_uuid,current_time)
         user_event_name = "restart"
-    add_user_event(logger,project_uuid,submission_dict,user_event_name)
+    add_user_event(logger,job_uuid,submission_dict,user_event_name)
     running_command_template =  "Running workflow ( {} ) of Roslin {} [ version {} ] on {}\nProject: {} [{}]\nOutput: {}\nLogs: {}"
-    running_command_str = running_command_template.format(workflow_name,pipeline_name,pipeline_version,batch_system,project_id,project_uuid,roslin_output_path,log_folder)
+    running_command_str = running_command_template.format(workflow_name,pipeline_name,pipeline_version,batch_system,project_id,job_uuid,roslin_output_path,log_folder)
     if workflow_results_path:
         running_command_str = running_command_str + "\nResults: {}".format(workflow_results_path)
     with open(submission_log_path,"w") as submission_file:
         json.dump(submission_dict,submission_file)
     if foreground_mode:
-        clean_up_tuple = (project_id, project_uuid, pipeline_name, pipeline_version, True)
+        clean_up_tuple = (project_id, job_uuid, pipeline_name, pipeline_version, True)
         signal.signal(signal.SIGINT, partial(cleanup, clean_up_tuple))
         signal.signal(signal.SIGTERM, partial(cleanup, clean_up_tuple))
         print(running_command_str)
@@ -449,7 +450,7 @@ def main():
     # create a new unique job uuid
     if not restart_job_uuid:
         jobstore_uuid = str(uuid.uuid1())
-        project_uuid = str(uuid.uuid1())
+        job_uuid = str(uuid.uuid1())
         restart = False
     else:
         previous_work_base_dir = os.path.join(work_base_dir, restart_job_uuid[:8], restart_job_uuid)
@@ -463,10 +464,10 @@ def main():
             exit(1)
         with open(previous_jobstore_uuid_path) as previous_jobstore_uuid_file:
             jobstore_uuid = previous_jobstore_uuid_file.readline().strip()
-        project_uuid = restart_job_uuid
+        job_uuid = restart_job_uuid
         restart = True
 
-    work_dir = os.path.join(work_base_dir, project_uuid[:8], project_uuid)
+    work_dir = os.path.join(work_base_dir, job_uuid[:8], job_uuid)
     # create only if work_dir does not exist
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
@@ -510,7 +511,7 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, project_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, on_start_abspath, on_complete_abspath, on_fail_abspath, on_success_abspath)
+    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, on_start_abspath, on_complete_abspath, on_fail_abspath, on_success_abspath)
 
 if __name__ == "__main__":
 
