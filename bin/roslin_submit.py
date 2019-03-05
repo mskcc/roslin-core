@@ -493,15 +493,7 @@ def main():
     with open(jobstore_uuid_path,"w") as jobstore_uuid_file:
         jobstore_uuid_file.write(jobstore_uuid)
 
-    #if restart and previous_work_base_dir:
-    #    previous_outputs = os.path.join(previous_work_base_dir,'outputs')
-    #    current_output = os.path.join(work_dir,'outputs')
-    #    shutil.copytree(previous_outputs,current_output)
-
-    # copy input metadata files (mapping, grouping, paring, request, and inputs.yaml)
-
     input_yaml_work_dir_location = os.path.join(work_dir,inputs_yaml_basename)
-    #copy_ignore_same_file(inputs_yaml,input_yaml_work_dir_location)
     # convert any relative path in inputs.yaml (e.g. path: ../abc)
     # to absolute path (e.g. path: /ifs/abc)
     convert_yaml_abs_path(inputs_yaml,work_dir,inputs_yaml)
