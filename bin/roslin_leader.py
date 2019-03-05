@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
-from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event
+from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
 from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists
 from toil.common import Toil
 from toil.job import Job, JobNode
@@ -435,6 +435,7 @@ if __name__ == "__main__":
         roslin_workflow_params = roslin_workflow.params
         with open(workflow_params_path,"w") as workflow_params_file:
             json.dump(roslin_workflow_params,workflow_params_file)
+        update_workflow_params(logger,options.project_uuid,roslin_workflow_params)
         clean_up_dict = {'logger':logger,'toil_obj':toil_obj,'track_leader':track_leader,'clean_workflow':clean_workflow,'batch_system':options.batch_system,'uuid':options.project_uuid,'workflow':roslin_workflow}
         signal.signal(signal.SIGINT, partial(cleanup, clean_up_dict))
         signal.signal(signal.SIGTERM, partial(cleanup, clean_up_dict))
