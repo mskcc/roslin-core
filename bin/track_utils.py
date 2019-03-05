@@ -25,7 +25,7 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs
 import dill
-import simplejson
+import json
 import sys
 import yaml
 import copy
@@ -331,11 +331,21 @@ def finish_all_running_or_pending_jobs(job_dict):
 def update_run_result_doc(logger,project_uuid,run_result_doc):
     update_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid,run_result_doc)
 
+def update_run_profile_doc(logger,project_uuid,run_profile_doc):
+    update_mongo_document(logger,RUN_PROFILES_COLLECTION,project_uuid,run_profile_doc)
+
 def update_project_doc(logger,project_uuid,project_doc):
     update_mongo_document(logger,PROJECTS_COLLECTION,project_uuid,project_doc)
 
 def update_run_data_doc(logger,project_uuid,run_data_doc):
     update_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid,run_data_doc)
+
+def update_workflow_params(logger,project_uuid,workflow_params):
+    run_profile_doc = get_mongo_document(logger,RUN_PROFILES_COLLECTION,project_uuid)
+    if not run_profile_doc:
+        return
+    run_profile_doc['workflow_params'] = workflow_params
+    update_mongo_document(logger,RUN_PROFILES_COLLECTION,project_uuid,run_profile_doc)
 
 def update_run_results_status(logger,project_uuid,status):
     run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
@@ -502,6 +512,60 @@ def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, pr
     }
 
     return project
+
+def construct_run_profile_doc(logger,job_uuid,pipeline_settings):
+
+    pipeline_name = os.environ["ROSLIN_PIPELINE_NAME"]
+    roslin_bin_path = pipeline_settings['ROSLIN_PIPELINE_BIN_PATH']
+    roslin_resource_path = os.path.join(roslin_bin_path,'scripts','roslin_resources.json')
+    images_meta_path = os.path.join(roslin_bin_path,'img','images_meta.json')
+
+    dependencies = {
+        "core": {
+            "version": os.environ['ROSLIN_CORE_VERSION'],
+            "path": os.environ['ROSLIN_CORE_ROOT']
+        },
+        pipeline_name:{
+            "version": pipeline_settings['ROSLIN_PIPELINE_VERSION'],
+            "path": pipeline_settings['ROSLIN_PIPELINE_ROOT'],
+            "resource_path": roslin_resource_path
+        }
+        "singularity": {
+            "version": pipeline_settings['ROSLIN_SINGULARITY_VERSION'],
+            "path": pipeline_settings['ROSLIN_SINGULARITY_PATH'],
+            "bind_path": pipeline_settings['SINGULARITY_BIND']
+        },
+        "toil": {
+            "version": pipeline_settings['ROSLIN_TOIL_VERSION'],
+            "path": pipeline_settings['ROSLIN_TOIL_INSTALL_PATH']
+        },
+        "cmo": {
+            "version": pipeline_settings['ROSLIN_CMO_VERSION'],
+            "path": pipeline_settings['ROSLIN_CMO_INSTALL_PATH']
+        }
+    }
+
+    with open(roslin_resource_path,'r') as roslin_resource_file:
+        roslin_resource_data = json.load(roslin_resource_file)
+
+    with open(images_meta_path,'r') as images_meta_file:
+        images_meta_data = json.load(images_meta_file)
+
+    references = {
+        "genomes": roslin_resource_data['genomes'],
+        "targets": roslin_resource_data['targets'],
+        "request_files": roslin_resource_data['request_files']
+    }
+
+    run_profile = {
+        "docVersion": DOC_VERSION,
+        "pipeline_version": pipeline_version,
+        "dependencies": dependencies,
+        "tools": images_meta_data,
+        "references": references
+    }
+
+    return run_profile
 
 def get_status_names():
     status_name_dict = {'running':'RUN','pending':'PEND','done':'DONE','exit':'EXIT','unknown':'UNKWN'}
