@@ -28,13 +28,6 @@ Example:   sing.sh samtools 1.3.1 view sample.bam
 EOF
 }
 
-# set up singularity bind paths
-bind_path=""
-for single_bind_path in ${ROSLIN_BIND_PATH}
-do
-  bind_path="${bind_path} --bind ${single_bind_path}:${single_bind_path}"
-done
-
 # path to container images
 container_image_path="${ROSLIN_PIPELINE_BIN_PATH}/img"
 
@@ -69,5 +62,4 @@ fi
 # start a singularity container with an empty environment
 ${ROSLIN_SINGULARITY_PATH} run \
   --cleanenv \
-  ${bind_path} \
   ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif $*
