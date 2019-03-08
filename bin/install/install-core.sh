@@ -1,7 +1,11 @@
 #!/bin/bash
-
+script_rel_dir=`dirname ${BASH_SOURCE[0]}`
+script_dir=`python -c "import os; print os.path.abspath('${script_rel_dir}')"`
+BIN_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.dirname('${script_dir}'))"`
+CONFIG_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'config'))"`
+SCHEMA_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'schemas'))"`
 # load settings
-source ../../config/settings.sh
+source $CONFIG_DIRECTORY/settings.sh
 
 mkdir -p ${ROSLIN_CORE_PATH}
 mkdir -p ${ROSLIN_CORE_BIN_PATH}
@@ -9,9 +13,9 @@ mkdir -p ${ROSLIN_CORE_CONFIG_PATH}
 mkdir -p ${ROSLIN_CORE_SCHEMA_PATH}
 
 # copy scripts
-cp -r ../* ${ROSLIN_CORE_BIN_PATH}
-cp -r ../../config/settings.sh ${ROSLIN_CORE_CONFIG_PATH}
-cp -r ../../schemas/* ${ROSLIN_CORE_SCHEMA_PATH}
+cp -r $BIN_DIRECTORY/* ${ROSLIN_CORE_BIN_PATH}
+cp -r $CONFIG_DIRECTORY/settings.sh ${ROSLIN_CORE_CONFIG_PATH}
+cp -r $SCHEMA_DIRECTORY/* ${ROSLIN_CORE_SCHEMA_PATH}
 cp ${ROSLIN_CORE_BIN_PATH}/roslin-project-status.sh ${ROSLIN_CORE_BIN_PATH}/bjp
 
 # give write permission
