@@ -265,79 +265,78 @@ def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
     import ruamel.yaml as yaml
 
     result = None
+    cwd = os.getcwd()
 
     #yaml_data = []
 
-    for single_output_meta_file in output_meta_list:
-        if single_output_meta_file:
-            with open(single_output_meta_file,'r') as output_meta_file:
-                yaml_contents = yaml.safe_load(output_meta_file)
-                #yaml_data.append(yaml_contents)
-                result = merge(result,yaml_contents)
+    input_file_list = output_meta_list + yaml_file_list
 
-    for single_yaml_file in yaml_file_list:
-        if single_yaml_file:
-            with open(single_yaml_file,'r') as single_yaml:
-                yaml_contents = yaml.safe_load(single_yaml)
-                #yaml_data.append(yaml_contents)
-                result = merge(result, yaml_contents)
+    for input_file in input_file_list:
+        if input_file:
+            with open(input_file,'r') as single_file:
+                yaml_contents = yaml.safe_load(single_file)
+            file_location = os.path.dirname(input_file)
+            os.chdir(file_location)
+            yaml_converted = convert_dict(yaml_contents)
+            os.chdir(cwd)
+            result = merge(result, yaml_converted)
 
     with open(yaml_location, 'w') as outfile:
         yaml.dump(result, outfile,  default_flow_style=False)
 
+
+def convert_list(sample_list):
+    if not sample_list:
+        return sample_list
+    new_list = []
+    for single_item in sample_list:
+        if isinstance(single_item,dict):
+            new_item = convert_dict(single_item)
+            new_list.append(new_item)
+        elif isinstance(single_item,list):
+            new_item = convert_list(single_item)
+            new_list.append(new_item)
+        else:
+            new_list.append(single_item)
+    return new_list
+
+def convert_dict(sample_dict):
+    new_dict = {}
+    location_path = ""
+    file_prefix = False
+    file_key = ''
+    new_dict = {}
+    if not sample_dict:
+        return sample_dict
+    for single_key in sample_dict.keys():
+        sample_obj = sample_dict[single_key]
+        if isinstance(sample_obj,dict):
+            new_obj = convert_dict(sample_obj)
+        elif isinstance(sample_obj,list):
+            sample_obj = convert_list(sample_obj)
+        new_dict[single_key] = sample_obj
+    if 'class' in new_dict:
+        if new_dict['class'] == 'File':
+            #print(new_dict)
+            if 'location' in new_dict:
+                file_key = 'location'
+            elif 'path' in new_dict:
+                file_key = 'path'
+            if file_key:
+                location_path = new_dict[file_key]
+                if 'file://' in location_path:
+                    file_prefix = True
+                    location_path = location_path[7:]
+                abs_path = os.path.abspath(location_path)
+                new_location_path = ''
+                if file_prefix:
+                    new_location_path = 'file://' + abs_path
+                else:
+                    new_location_path = abs_path
+                new_dict[file_key] = new_location_path
+    return new_dict
+
 def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
-
-    def convert_list(sample_list):
-        if not sample_list:
-            return sample_list
-        new_list = []
-        for single_item in sample_list:
-            if isinstance(single_item,dict):
-                new_item = convert_dict(single_item)
-                new_list.append(new_item)
-            elif isinstance(single_item,list):
-                new_item = convert_list(single_item)
-                new_list.append(new_item)
-            else:
-                new_list.append(single_item)
-        return new_list
-
-    def convert_dict(sample_dict):
-        new_dict = {}
-        location_path = ""
-        file_prefix = False
-        file_key = ''
-        new_dict = {}
-        if not sample_dict:
-            return sample_dict
-        for single_key in sample_dict.keys():
-            sample_obj = sample_dict[single_key]
-            if isinstance(sample_obj,dict):
-                new_obj = convert_dict(sample_obj)
-            elif isinstance(sample_obj,list):
-                sample_obj = convert_list(sample_obj)
-            new_dict[single_key] = sample_obj
-        if 'class' in new_dict:
-            if new_dict['class'] == 'File':
-                #print(new_dict)
-                if 'location' in new_dict:
-                    file_key = 'location'
-                elif 'path' in new_dict:
-                    file_key = 'path'
-                if file_key:
-                    location_path = new_dict[file_key]
-                    if 'file://' in location_path:
-                        file_prefix = True
-                        location_path = location_path[7:]
-                    abs_path = os.path.abspath(location_path)
-                    new_location_path = ''
-                    if file_prefix:
-                        new_location_path = 'file://' + abs_path
-                    else:
-                        new_location_path = abs_path
-                    new_dict[file_key] = new_location_path
-        return new_dict
-
 
     import ruamel.yaml as yaml
     import json
