@@ -930,59 +930,49 @@ class RoslinWorkflow(object):
                 archive_log_stderr = find_unique_name_in_dir(log_stderr,log_error_folder)
                 log_failed_stderr = os.path.join(log_error_folder,archive_log_stderr)
                 shutil.move(log_path_stderr,log_failed_stderr)
-        track_job_flag = Event()
-        roslin_track_worker = Thread(target=track_job, args=(track_job_flag,params,job_params,job_restart,logger))
-        track_job_flag.set()
-        roslin_track_worker.start()
-        cwl_process_ret_code = run_command(roslin_runner_command,log_path_stdout,log_path_stderr,False,True)
-        track_job_flag.clear()
-        roslin_track_worker.join()
-        error_code = cwl_process_ret_code['errorcode']
+        command_output = run_command(command,log_path_stdout,log_path_stderr,shell,True)
+        error_code = command_output['errorcode']
         return error_code
 
     def add_requirement(self,parser):
         pass
-    def on_start(self):
-        self.run_hook("on_start","on start")
+    def on_start(self,logger):
+        self.run_hook("on_start","on start",logger)
 
     def run_pipeline(self):
         pass
-    def on_complete(self):
-        self.run_hook("on_complete","on complete")
-    def on_fail(self):
-        self.run_hook("on_fail","on fail")
-    def on_success(self):
-        self.run_hook("on_success","on success")
+    def on_complete(self,logger):
+        self.run_hook("on_complete","on complete",logger)
+    def on_fail(self,logger):
+        self.run_hook("on_fail","on fail",logger)
+    def on_success(self,logger):
+        self.run_hook("on_success","on success",logger)
 
-    def run_hook(self,hook_key, hook_name):
+    def run_hook(self,hook_key, hook_name,logger):
         params = self.params
         if params[hook_key]:
             script_path = params[hook_key]
-            logger = dill.loads(params['logger'])
-            log(logger,'info',"Running " + hook_name + " Python hook")
-            self.run_python_hook(script_path)
+            log(logger,'info',"Running " + hook_name + " python hook")
+            self.run_python_hook(script_path,logger)
 
-    def run_python_hook(self,path):
+    def run_python_hook(self,path,logger):
         params = self.params
-        logger = dill.loads(params['logger'])
         script_basename = os.path.basename(path)
         info_message = "Running python hook: " + script_basename
         debug_message = "Script location: " + path
-        log(logger,'info',info_message)
-        log(logger,'debug',debug_message)
         input_data = self.params['workflow_params_path']
         python_hook_command = ["python",path,"--data",input_data]
-        hook_process = run_command(copy_command,None,None,False,True)
+        hook_process = run_command(python_hook_command,None,None,False,True)
         output_message = ""
         error_message = ""
         if hook_process['output']:
             output_message = "----- log stdout -----\n {}".format(hook_process['output'])
         if hook_process['error']:
-            error_message = "----- log stderr -----\n {}",format(hook_process['error'])
+            error_message = "----- log stderr -----\n {}".format(hook_process['error'])
         if hook_process['errorcode'] != 0:
-            error_message = error_message + "\nPython hook ( {} ) Failed, errorcode: {}".format(script_basename,str(hook_process['errorcode']))
+            error_message = "Python hook ( {} ) Failed, errorcode: {}\n".format(script_basename,hook_process['errorcode']) + error_message
         else:
-            output_message = output_message + "\nPython hook ( {} ) Done".format(script_basename)
+            output_message = "Python hook ( {} ) Done\n".format(script_basename) + output_message
         if output_message:
             log(logger,'info',output_message)
         if error_message:

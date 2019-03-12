@@ -115,20 +115,20 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
     if status == running_status:
         start_message = workflow_name + " is now starting"
         log(logger,'info',start_message)
+        roslin_workflow.on_start(logger)
         log(logger,'info',starting_log_message)
-        roslin_workflow.on_start()
     if status == done_status:
         done_message = workflow_name + " is now done"
         log(logger,'info',done_message)
+        roslin_workflow.on_success(logger)
+        roslin_workflow.on_complete(logger)
         log(logger,'info',finished_log_message)
-        roslin_workflow.on_success()
-        roslin_workflow.on_complete()
     if status == exit_status:
         exit_message = workflow_name + " has exited"
         log(logger,'info',exit_message)
+        roslin_workflow.on_fail(logger)
+        roslin_workflow.on_complete(logger)
         log(logger,'info',exiting_log_message)
-        roslin_workflow.on_fail()
-        roslin_workflow.on_complete()
 
 
 def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_dict,roslin_workflow,work_dir,tmp_dir):

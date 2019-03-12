@@ -108,13 +108,17 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
         roslin_leader_command.append('--restart')
         user_event_name = "restart"
     if on_start:
-        roslin_leader_command.append('--on_start', on_start)
+        on_start_abspath = os.path.abspath(on_start)
+        roslin_leader_command.extend(['--on_start', on_start_abspath])
     if on_complete:
-        roslin_leader_command.append('--on-complete', on_complete)
+        on_complete_abspath = os.path.abspath(on_complete)
+        roslin_leader_command.extend(['--on-complete', on_complete_abspath])
     if on_fail:
-        roslin_leader_command.append('--on-fail', on_fail)
+        on_fail_abspath = os.path.abspath(on_fail)
+        roslin_leader_command.extend(['--on-fail', on_fail_abspath])
     if on_success:
-        roslin_leader_command.append('--on-success', on_success)
+        on_success_abspath = os.path.abspath(on_success)
+        roslin_leader_command.extend(['--on-success', on_success_abspath])
     leader_job_store = jobstore_uuid
     leader_job_store_path = "file:" + os.path.join(roslin_leader_tmp_path,leader_job_store)
     roslin_leader_command.append(leader_job_store_path)
@@ -416,10 +420,6 @@ def main():
     check_if_argument_file_exists(params.on_fail)
     check_if_argument_file_exists(params.on_success)
     check_if_argument_file_exists(params.inputs_yaml)
-    on_start_abspath = os.path.abspath(params.on_start)
-    on_complete_abspath = os.path.abspath(params.on_complete)
-    on_fail_abspath = os.path.abspath(params.on_fail)
-    on_success_abspath = os.path.abspath(params.on_success)
     inputs_yaml = os.path.abspath(params.inputs_yaml)
     roslin_workflow_class = getattr(roslin_workflows,params.workflow_name)
     roslin_workflow = roslin_workflow_class(None)
@@ -494,17 +494,17 @@ def main():
     with open(jobstore_uuid_path,"w") as jobstore_uuid_file:
         jobstore_uuid_file.write(jobstore_uuid)
 
-    input_yaml_work_dir_location = os.path.join(work_dir,inputs_yaml_basename)
+    inputs_yaml_work_dir = os.path.join(work_dir,inputs_yaml_basename)
     # convert any relative path in inputs.yaml (e.g. path: ../abc)
     # to absolute path (e.g. path: /ifs/abc)
     convert_yaml_abs_path(inputs_yaml,work_dir,inputs_yaml)
-    copy_ignore_same_file(inputs_yaml,input_yaml_work_dir_location)
+    copy_ignore_same_file(inputs_yaml,inputs_yaml_work_dir)
     #convert_examples_to_use_abs_path(inputs_yaml)
 
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, on_start_abspath, on_complete_abspath, on_fail_abspath, on_success_abspath)
+    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml_work_dir, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, params.on_start, params.on_complete, params.on_fail, params.on_success)
 
 if __name__ == "__main__":
 
