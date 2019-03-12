@@ -364,9 +364,8 @@ def check_if_env_is_empty(env_value):
 def copy_ignore_same_file(first_file,second_file):
     if os.path.exists(second_file):
         if filecmp.cmp(first_file,second_file):
-            pass
-    else:
-        shutil.copyfile(first_file,second_file)
+            return
+    shutil.copyfile(first_file,second_file)
 
 def read_pipeline_settings(pipeline_name, pipeline_version):
     "read the Roslin Pipeline settings"
