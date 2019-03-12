@@ -88,7 +88,6 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
             batch_system_obj.killBatchJobs(issued_jobs)
         if batch_system == 'LSF':
             kill_all_lsf_jobs(logger,uuid)
-        workflow_transition(logger,workflow,uuid,exit_status)
 
 def read_file(file_path, file_position):
     if os.path.exists(file_path):
