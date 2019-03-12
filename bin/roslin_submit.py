@@ -443,7 +443,7 @@ def main():
     inputs_yaml_dirname = os.path.dirname(inputs_yaml)
     inputs_yaml_basename = os.path.basename(inputs_yaml)
 
-    if params.force_overwrite and not params.copy_output_dir:
+    if params.force_overwrite_results and not params.results_dir:
         print_error("ERROR: You need to specify an output directory to force overwrite")
         sys.exit(1)
 
