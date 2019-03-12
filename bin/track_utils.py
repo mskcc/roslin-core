@@ -529,7 +529,7 @@ def construct_run_profile_doc(logger,job_uuid,pipeline_settings):
             "version": pipeline_settings['ROSLIN_PIPELINE_VERSION'],
             "path": pipeline_settings['ROSLIN_PIPELINE_ROOT'],
             "resource_path": roslin_resource_path
-        }
+        },
         "singularity": {
             "version": pipeline_settings['ROSLIN_SINGULARITY_VERSION'],
             "path": pipeline_settings['ROSLIN_SINGULARITY_PATH'],

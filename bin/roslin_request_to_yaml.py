@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import sys
 import os
 import re
@@ -33,7 +32,7 @@ def run_command(params, pipeline_settings):
     command_args = []
     for single_arg_key in params_dict:
         single_arg = '--'+ single_arg_key
-	single_arg = single_arg.replace('_','-')
+        single_arg = single_arg.replace('_','-')
         single_arg_value = params_dict[single_arg_key]
         command_args.append(single_arg)
         command_args.append(single_arg_value)
