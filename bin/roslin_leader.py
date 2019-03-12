@@ -74,9 +74,9 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
         if batch_system_obj:
             issued_jobs = batch_system_obj.getIssuedBatchJobIDs()
             job_dict = {}
-            if hasattr(batch_system,'jobs'):
+            if hasattr(batch_system_obj,'jobs'):
                 job_dict = batch_system_obj.jobs
-            if hasattr(batch_system,'currentJobs'):
+            if hasattr(batch_system_obj,'currentJobs'):
                 job_dict = batch_system_obj.currentJobs
             for single_issued_job in issued_jobs:
                 job_killed_message = "Killing toil job: " + str(single_issued_job)
