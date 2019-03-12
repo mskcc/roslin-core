@@ -517,6 +517,7 @@ def construct_run_profile_doc(logger,job_uuid,pipeline_settings):
 
     pipeline_name = os.environ["ROSLIN_PIPELINE_NAME"]
     roslin_bin_path = pipeline_settings['ROSLIN_PIPELINE_BIN_PATH']
+    pipeline_version = pipeline_settings['ROSLIN_PIPELINE_VERSION']
     roslin_resource_path = os.path.join(roslin_bin_path,'scripts','roslin_resources.json')
     images_meta_path = os.path.join(roslin_bin_path,'img','images_meta.json')
 
@@ -559,6 +560,7 @@ def construct_run_profile_doc(logger,job_uuid,pipeline_settings):
 
     run_profile = {
         "docVersion": DOC_VERSION,
+        "pipelineJobId": job_uuid,
         "pipeline_version": pipeline_version,
         "dependencies": dependencies,
         "tools": images_meta_data,

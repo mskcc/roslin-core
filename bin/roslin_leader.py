@@ -100,6 +100,14 @@ def read_file(file_path, file_position):
         new_position = file_position
     return {'contents':contents,'position':new_position}
 
+def add_version_str(workflow_params):
+    roslin_core_version = workflow_params['env']['ROSLIN_CORE_VERSION']
+    roslin_pipeline_name = workflow_params['env']['ROSLIN_PIPELINE_NAME']
+    roslin_pipeline_version = workflow_params['env']['ROSLIN_PIPELINE_VERSION']
+    roslin_cmo_version = workflow_params['env']['ROSLIN_CMO_VERSION']
+    version_str = "VERSIONS: roslin-core-{}, roslin-{}-{}, cmo-{}".format(roslin_core_version,roslin_pipeline_name,roslin_pipeline_version,roslin_cmo_version)
+    workflow_params['version_str'] = version_str
+    return workflow_params
 
 def workflow_transition(logger,roslin_workflow,job_uuid,status):
     workflow_name = roslin_workflow.params['workflow_name']
@@ -427,11 +435,13 @@ if __name__ == "__main__":
         cwl_batch_system = options.batch_system
     with Toil(options) as toil_obj:
         workflow_failed = False
-        workflow_params_path = os.path.join(workdir,"workflow_params.json")
+        workflow_params_path = os.path.join(options.log_folder,"workflow_params.json")
         workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'results_dir':options.project_results, 'force_overwrite_results':options.force_overwrite_results, 'inputs': input_yaml_data, 'workflow_params_path': workflow_params_path, 'on_start': options.on_start, 'on_complete': options.on_complete, 'on_fail': options.on_fail, 'on_success': options.on_success, 'env':dict(os.environ)}
+        workflow_params = add_version_str(workflow_params)
         workflow_params.update(requirements_dict)
         roslin_workflow = roslin_workflow_class(workflow_params)
-        roslin_workflow_params = roslin_workflow.params
+        roslin_workflow_params = copy.deepcopy(roslin_workflow.params)
+        del roslin_workflow_params['logger']
         with open(workflow_params_path,"w") as workflow_params_file:
             json.dump(roslin_workflow_params,workflow_params_file)
         update_workflow_params(logger,options.project_uuid,roslin_workflow_params)
