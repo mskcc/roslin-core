@@ -795,6 +795,34 @@ class RoslinWorkflow(object):
                     last_workflow_job.addFollowOn(roslin_job_obj)
         return last_workflow_job
 
+    def roslin_analysis(self,last_workflow_job):
+        params = self.params
+        input_yaml = params.input_yaml
+        results_directory = params.results_dir
+        maf_directory = os.path.join(results_dir,'maf')
+        facets_directory = os.path.join(results_dir,'facets')
+        qc_directory = os.path.join(results_dir,'qc')
+        log_dir = params.log_folder
+        sample_summary_file = project_id + "_SampleSummary.txt"
+        sample_summary_path = os.path.join(qc_directory,sample_summary_file)
+        debug_mode = params.debug_mode
+        pipeline_bin_path = self.params['env']['ROSLIN_PIPELINE_BIN_PATH']
+        roslin_analysis_script = os.path.join(pipeline_bin_path,'roslin_analysis_helper.py')
+        roslin_analysis_command = ['python',roslin_analysis_script,
+        '--inputs',input_yaml,
+        '--maf_directory',maf_directory,
+        '--facets_directory',facets_directory,
+        '--results_directory',results_directory,
+        '--log_directory',log_dir,
+        '--sample_summary',sample_summary_path]
+        if debug_mode:
+            roslin_analysis_command.append('--debug')
+        job_params = self.set_default_job_params()
+        job_name = "roslin_analysis"
+        roslin_analysis_job = create_job(self,self.run_process,params,job_params,job_name)
+        last_workflow_job.addFollowOn(roslin_analysis_job)
+        return last_workflow_job
+
     def add_requirement(self,parser):
         pass
 
@@ -912,6 +940,26 @@ class RoslinWorkflow(object):
             roslin_runner_command.extend(["-d"])
         if test_mode:
             roslin_runner_command.extend(["-t"])
+        track_job_flag = Event()
+        roslin_track_worker = Thread(target=track_job, args=(track_job_flag,params,job_params,job_restart,logger))
+        track_job_flag.set()
+        roslin_track_worker.start()
+        cwl_process_ret_code = self.run_process_helper(roslin_runner_command,False,job_name)
+        track_job_flag.clear()
+        roslin_track_worker.join()
+        error_code = cwl_process_ret_code
+        return error_code
+
+    def run_process(self,params,job_params):
+        command = job_params['command']
+        shell = job_params['shell']
+        job_name = job_params['name']
+        return self.run_process_helper(command,shell,job_name)
+
+    def run_process_helper(self,command,shell,job_name):
+        params = self.params
+        logger = dill.loads(params['logger'])
+        log_folder = params['log_folder']
         if not os.path.exists(log_folder):
             os.mkdir(log_folder)
         log_stdout = job_name + "-stdout.log"

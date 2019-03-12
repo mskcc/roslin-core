@@ -54,6 +54,9 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
     if results_dir:
         workflow_results_folder = project_id+"."+job_uuid
         workflow_results_path = os.path.join(results_dir,workflow_results_folder)
+        if not os.access(results_dir, os.W_OK):
+            print_error("ERROR: Can not write to " + str(results_dir))
+            exit(1)
     run_attempt = 0
     if not os.path.exists(log_folder):
         os.mkdir(log_folder)
