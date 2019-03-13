@@ -62,4 +62,4 @@ fi
 # start a singularity container with an empty environment
 ${ROSLIN_SINGULARITY_PATH} run \
   --cleanenv \
-  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif $*
+  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif "$1" ${@:2}
