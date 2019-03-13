@@ -232,7 +232,6 @@ cwltoil \
     --not-strict \
     --disableCaching \
     --disableChaining \
-    --cleanWorkDir never \
     --realTimeLogging \
     --maxLogFileSize 0 \
     --writeLogs ${output_directory}/log \
