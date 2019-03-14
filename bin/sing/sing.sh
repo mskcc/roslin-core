@@ -31,13 +31,6 @@ EOF
 # path to container images
 container_image_path="${ROSLIN_PIPELINE_BIN_PATH}/img"
 
-while getopts “i” OPTION
-do
-    case $OPTION in
-        i) inspect="set" ;;
-    esac
-done
-
 tool_name=${@:$OPTIND:1}
 tool_version=${@:$OPTIND+1:1}
 
@@ -48,16 +41,6 @@ fi
 
 shift
 shift
-
-# output metadata (labels) if the inspect option (-i) is supplied
-if [ "$inspect" = "set" ]
-then
-${ROSLIN_SINGULARITY_PATH} exec \
-    --cleanenv \
-    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif \
-    cat /.roslin/labels.json
-  exit $?
-fi
 
 # start a singularity container with an empty environment
 ${ROSLIN_SINGULARITY_PATH} run \

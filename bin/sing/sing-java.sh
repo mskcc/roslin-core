@@ -40,5 +40,5 @@ tool_version=${sing_opts[2]}
 tool_opts=`echo ${sing_opts[*]} | cut -d' ' -f4-`
 sing=`echo ${sing_opts[*]} | cut -d' ' -f1-3`
 
-# echo "==> $sing ${java_opts[*]} ${tool_name} ${tool_opts}"
+# echo "==> $sing ${java_opts[*]} ${tool_opts}"
 $sing "${java_opts[*]}" ${tool_opts}
