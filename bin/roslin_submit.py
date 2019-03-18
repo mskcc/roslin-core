@@ -198,13 +198,12 @@ def targzip_project_files(project_id, project_path):
     for filename in files:
         single_file_path = os.path.abspath(filename)
         if os.path.isfile(single_file_path):
-            single_file_name = os.path.dirname(filename)
-            single_file_name_no_ext = os.path.splitext(single_file_name)[0]
+            single_file_name = os.path.basename(filename)
             single_file_size = os.path.getsize(filename)
             single_file_sha1 = "sha1$" + generate_sha1(filename)
             if single_file_size < MAX_META_FILE_SIZE:
-                tar.add(filename)
-                file_obj = {"path": single_file_path,"checksum": single_file_sha1, "name":filename}
+                tar.add(single_file_path, arcname=single_file_name)
+                file_obj = {"path": single_file_path,"checksum": single_file_sha1, "name":single_file_name}
             input_file_objs.append(file_obj)
     tar.close()
 
