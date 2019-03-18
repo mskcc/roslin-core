@@ -913,7 +913,8 @@ class RoslinWorkflow(object):
         job_store_name = job_jobstore
         job_store_path = os.path.join(job_tmp_dir,job_store_name)
         job_suffix = ''
-        if os.path.exists(job_store_path):
+        job_store_job_return_value = os.path.join(job_store_path,'rootJobReturnValue')
+        if os.path.exists(job_store_job_return_value):
             job_restart = True
         if os.path.exists(job_output_dir):
             job_error_folder = os.path.join(workflow_output_directory,old_jobs_folder)
