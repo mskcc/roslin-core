@@ -445,7 +445,7 @@ def add_user_event(logger, project_uuid, user_event_data, user_event_type):
 
 def construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow, input_files, user_id, submitted_time, cwltoil_log, stdout_log, stderr_log):
     status_name_dict = get_status_names()
-    pending_status = status_name_dict['pending']
+    unkwn_status = status_name_dict['unknown']
     run_result = {
         "docVersion": DOC_VERSION,
         "pipelineJobId":job_uuid,
@@ -463,7 +463,7 @@ def construct_run_results_doc(pipeline_name, pipeline_version, project_id, proje
             "lastUpdated": get_current_time(),
             "duration": None
         },
-        "status": pending_status,
+        "status": unkwn_status,
         "logFiles": {
             "cwltoil": cwltoil_log,
             "stdout": stdout_log,
