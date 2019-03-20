@@ -157,7 +157,9 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     job_status = {}
     while track_leader.is_set():
         if toil_obj._batchSystem:
-            user_kill_signal = check_user_kill_signal(project_id, job_uuid, pipeline_name, pipeline_version)
+            log_dir = os.path.join(work_dir,'log')
+            dir_paths = (log_dir,work_dir,tmp_dir)
+            user_kill_signal = check_user_kill_signal(project_id, job_uuid, pipeline_name, pipeline_version, dir_paths)
             if user_kill_signal:
                 clean_up_dict['user_kill_signal'] = user_kill_signal
                 if 'error_message' in clean_up_dict and clean_up_dict['error_message'] != None:

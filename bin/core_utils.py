@@ -200,8 +200,11 @@ def kill_jobstore(job_store_path, termination_graceful):
         toil_kill_command_split = shlex.split(toil_kill_command)
         run_command_realtime(toil_kill_command_split,False)
 
-def check_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version):
-    log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
+def check_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version, dir_paths=None):
+    if not dir_paths:
+        log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
+    else:
+        (log_dir, work_dir, tmp_path) = dir_paths
     from track_utils import termination_file_name
     user_log_path = os.path.join(log_dir,termination_file_name)
     if os.path.exists(user_log_path):
