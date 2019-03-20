@@ -447,7 +447,7 @@ def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads,
         #with tempfile.NamedTemporaryFile(delete=False) as file_temp:
         for filename in worker_group:
             #file_temp.write(filename + "\n")
-            cmd = 'cp {} {}'.format(filename,dst_dir)
+            cmd = '/bin/cp {} {}'.format(filename,dst_dir)
             cmd_obj = {'command':cmd,'queue':worker_queue}
             cmds.append(cmd_obj)
             #cmd = 'parallel -a ' + file_temp.name + ' -j+' + str(worker_threads) + ' yes | cp {} ' + dst_dir
