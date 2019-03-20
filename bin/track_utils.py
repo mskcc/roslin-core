@@ -490,6 +490,8 @@ def construct_run_data_doc(job_uuid,jobstore_uuid,pipeline_version,project_id):
 def construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow, input_files, restart, project_results):
 
     project_collection = get_mongo_collection(logger,PROJECTS_COLLECTION)
+    if not project_collection:
+        return
     previous_projects = project_collection.find({'projectId':project_id})
     previous_runs = []
     for single_project in previous_projects:
@@ -695,7 +697,8 @@ class RoslinWorkflow(object):
         params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
         workflow_name = params['workflow_name']
         log_folder = params['log_folder']
-        params['configure'] = {}
+        if 'configure' not in params:
+            params['configure'] = {}
         if 'logger' not in params:
             if params['debug_mode']:
                 logging_level = logging.DEBUG
@@ -759,7 +762,8 @@ class RoslinWorkflow(object):
                     info_message = "Removing folder: " + results_path
                     log(logger,"info",info_message)
                     shutil.rmtree(results_path)
-            os.mkdir(results_path)
+            if not os.path.exists(results_path):
+                os.mkdir(results_path)
             log_file = ROSLIN_COPY_OUTPUTS_LOG
             log_file_path = os.path.join(log_folder,log_file)
             if os.path.exists(log_file_path):
@@ -797,15 +801,16 @@ class RoslinWorkflow(object):
 
     def roslin_analysis(self,last_workflow_job):
         params = self.params
-        input_yaml = params.input_yaml
-        results_directory = params.results_dir
-        maf_directory = os.path.join(results_dir,'maf')
-        facets_directory = os.path.join(results_dir,'facets')
-        qc_directory = os.path.join(results_dir,'qc')
-        log_dir = params.log_folder
+        input_yaml = params['input_yaml']
+        results_directory = params['results_dir']
+        maf_directory = os.path.join(results_directory,'maf')
+        facets_directory = os.path.join(results_directory,'facets')
+        qc_directory = os.path.join(results_directory,'qc')
+        log_dir = params['log_folder']
+        project_id = params['project_id']
         sample_summary_file = project_id + "_SampleSummary.txt"
         sample_summary_path = os.path.join(qc_directory,sample_summary_file)
-        debug_mode = params.debug_mode
+        debug_mode = params['debug_mode']
         pipeline_bin_path = self.params['env']['ROSLIN_PIPELINE_BIN_PATH']
         roslin_analysis_script = os.path.join(pipeline_bin_path,'roslin_analysis_helper.py')
         roslin_analysis_command = ['python',roslin_analysis_script,
@@ -819,7 +824,10 @@ class RoslinWorkflow(object):
             roslin_analysis_command.append('--debug')
         job_params = self.set_default_job_params()
         job_name = "roslin_analysis"
-        roslin_analysis_job = create_job(self,self.run_process,params,job_params,job_name)
+        job_params['name'] = job_name
+        job_params['shell'] = False
+        job_params['command'] = roslin_analysis_command
+        roslin_analysis_job = self.create_job(self.run_process,params,job_params,job_name)
         last_workflow_job.addFollowOn(roslin_analysis_job)
         return last_workflow_job
 

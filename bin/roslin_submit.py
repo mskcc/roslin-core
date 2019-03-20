@@ -65,7 +65,7 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
             with open(submission_log_path,"r") as submission_file_obj:
                 submission_contents = json.load(submission_file_obj)
             run_attempt = submission_contents['run_attempt'] + 2
-        old_jobs_folder_path = os.path.join(work_dir,old_jobs_folder_path)
+        old_jobs_folder_path = os.path.join(work_dir,old_jobs_folder)
         if not os.path.exists(old_jobs_folder_path):
             os.mkdir(old_jobs_folder_path)
         log_folder_basename = find_unique_name_in_dir('log',old_jobs_folder_path)
