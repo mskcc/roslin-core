@@ -208,15 +208,48 @@ def check_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_v
     from track_utils import termination_file_name
     user_log_path = os.path.join(log_dir,termination_file_name)
     if os.path.exists(user_log_path):
-        with open(user_log_path) as user_log_file:
-            user_log_data = json.load(user_log_file)
-            return user_log_data
+        user_log_data = load_json(user_log_path)
+        return user_log_data
     else:
         return None
 
 def save_json(json_path,json_data):
     with open(json_path,'w') as json_file:
         json.dump(json_data,json_file)
+
+def load_json(json_path):
+    json_data = None
+    with open(json_path) as json_file:
+        json_data = json.load(json_file)
+    return json_data
+
+def load_yaml(yaml_path):
+    import yaml
+    yaml_data = None
+    with open(yaml_path,'r') as yaml_file:
+        yaml_data = yaml.load(yaml_file)
+    return yaml_data
+
+def check_yaml_boolean_value(yaml_value):
+    yaml_true_value = ["y","Y","yes","Yes","YES","true","True","TRUE","on","On","ON"]
+    yaml_false_value = ["n","N","no","No","NO","false","False","FALSE","off","Off","OFF"]
+    if yaml_value in yaml_true_value:
+        return True
+    elif yaml_value in yaml_false_value:
+        return False
+    else:
+        return None
+
+def save_yaml(yaml_path,yaml_data):
+    import yaml
+    with open(yaml_path, 'w') as yaml_file:
+        yaml.dump(yaml_data, yaml_file)
+
+def convert_to_snake_case(input_str):
+    first_str = re.sub('(.)[A-Z][a-z]+)',r'\1_\2',name)
+    second_str = re.sub('([a-z0-9])([A-Z])',r'\1_\2',first_str).lower()
+    return second_str
+
 
 def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version, termination_graceful):
     log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
@@ -226,8 +259,7 @@ def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_ve
     user_termination_json = {'user':current_user,'hostname':current_hostname,'time':get_current_time(),'exit_graceful':termination_graceful,'error_message':None}
     user_log_path = os.path.join(log_dir,termination_file_name)
     user_submission_path = os.path.join(log_dir,submission_file_name)
-    with open(user_submission_path) as user_submission_file:
-        user_submission_data = json.load(user_submission_file)
+    user_submission_data = load_json(user_submission_path)
     error_message = ""
     submitted_user = user_submission_data['user']
     submitted_hostname = user_submission_data['hostname']
@@ -276,8 +308,7 @@ def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
 
     for input_file in input_file_list:
         if input_file:
-            with open(input_file,'r') as single_file:
-                yaml_contents = yaml.safe_load(single_file)
+            yaml_contents = yaml.load(input_file)
             file_location = os.path.dirname(input_file)
             os.chdir(file_location)
             yaml_converted = convert_dict(yaml_contents)
@@ -341,20 +372,15 @@ def convert_dict(sample_dict):
 
 def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
 
-    import ruamel.yaml as yaml
-    import json
-
     current_directory = os.getcwd()
 
     os.chdir(base_dir)
 
-    with open(inputs_yaml_path,'r') as input_yaml_file:
-        yaml_contents = yaml.safe_load(input_yaml_file)
+    yaml_contents = load_yaml(inputs_yaml_path)
 
     yaml_converted = convert_dict(yaml_contents)
 
-    with open(new_inputs_yaml_path, 'w') as output_yaml_file:
-        yaml.dump(yaml_converted, output_yaml_file,  default_flow_style=False)
+    save_yaml(new_inputs_yaml_path, yaml_converted)
 
     os.chdir(current_directory)
 

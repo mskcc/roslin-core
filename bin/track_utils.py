@@ -23,7 +23,7 @@ import copy
 from subprocess import PIPE, Popen
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs
+from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs, save_yaml
 import dill
 import json
 import sys

@@ -22,7 +22,7 @@ if 'ROSLIN_CORE_BIN_PATH' not in os.environ:
 ROSLIN_CORE_BIN_PATH = os.environ['ROSLIN_CORE_BIN_PATH']
 ROSLIN_CORE_CONFIG_PATH = os.environ['ROSLIN_CORE_CONFIG_PATH']
 sys.path.append(ROSLIN_CORE_BIN_PATH)
-from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists
+from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists, check_yaml_boolean_value
 
 MB_SIZE = (float(1024) ** 2)
 MAX_META_FILE_SIZE = 5 * MB_SIZE
