@@ -23,7 +23,7 @@ import copy
 from subprocess import PIPE, Popen
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs, save_yaml
+from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs, save_yaml, convert_to_snake_case
 import dill
 import json
 import sys
@@ -1051,6 +1051,69 @@ class RoslinWorkflow(object):
             log(logger,'info',output_message)
         if error_message:
             log(logger,'error',error_message)
+
+class SingleCWLWorkflow(RoslinWorkflow):
+
+    def configure(self,workflow_output_folder,cwl_filename,dependency_list):
+        super().configure()
+        workflow_name = self.__class__.__name__
+        output_config = self.get_outputs(workflow_output_folder)
+        input_config, dependency_key_list = self.get_inputs(dependency_list)
+        workflow_info = {'output':workflow_output_folder,'filename':cwl_filename,'dependency':dependency_list,'dependency_key_list':dependency_key_list,'output_config':output_config,'input_config':input_config}
+        self.params['workflows'][workflow_name] = workflow_info
+        self.params['requirement_list'] = input_config
+        self.update_copy_outputs_config(output_config)
+
+    def get_outputs(self,workflow_output_folder):
+        workflow_output_path = os.path.join("outputs",workflow_output_folder)
+        workflow_log_path = os.path.join(workflow_output_path,"log")
+        output_config = {"log": [{"patterns": ["cwltoil.log"], "input_folder": workflow_log_path, "output_folder": workflow_output_folder},
+                                 {"patterns": ["output-meta.json","settings","job-uuid","job-store-uuid","*.yaml"], "input_folder": workflow_output_path, "output_folder": workflow_output_folder}] }
+        return output_config
+
+    def get_inputs(self,dependency_list):
+        requirement_list = []
+        dependency_key_list = []
+        for single_dependency in dependency_list:
+            dependency_snake_case = convert_to_snake_case(single_dependency)
+            dependency_param = '--use_{}_meta'.format(dependency_snake_case)
+            dependency_key = '{}_meta'.format(dependency_snake_case)
+            dependency_description = "The path to the {} outputs meta file that you need for this run ( since this is a intermediate workflow )".format(workflow_name.lower())
+            dependency_requirement = ("store",str,dependency_key,dependency_param,dependency_description, True, True)
+            requirement_list.append(dependency_requirement)
+            dependency_key_list.append(dependency_key)
+        return (requirement_list, dependency_key_list)
+
+    def run_pipeline(self,job_params=None,run_analysis=False):
+        workflow_params = self.params
+        if not job_params:
+            job_params = self.set_default_job_params()
+        workflow_info = self.get_workflow_info()
+        dependency_key_list = workflow_info['dependency_key_list']
+        dependency_list = []
+        for single_dependency_key in dependency_key_list:
+            if '_meta' in single_dependency_key:
+                meta_json = workflow_params[single_dependency_key]
+                input_yaml = workflow_params['input_yaml']
+                single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
+                dependency_list.append(single_dependency_info)
+        return self.get_job(dependency_list,job_params=job_params)
+
+    def get_job(self,dependency_param_list,job_params=None):
+        if not job_params:
+            job_params = self.set_default_job_params()
+        workflow_info = self.get_workflow_info()
+        workflow_output = workflow_info['output']
+        parent_input_yaml_list = []
+        parent_output_meta_json_list = []
+        for single_dependency_param in dependency_param_list:
+            parent_input_yaml = single_dependency_param['input_yaml']
+            parent_output_meta_json = single_dependency_param['output_meta_json']
+            parent_input_yaml_list.append(parent_input_yaml)
+            parent_output_meta_json_list.append(parent_output_meta_json)
+        job_params['parent_output_meta_json_list'] = parent_output_meta_json_list
+        job_params['parent_input_yaml_list'] = parent_input_yaml_list
+        return self.create_job(self.run_cwl,self.params,job_params,workflow_output)
 
 
 class ReadOnlyFileJobStore(FileJobStore):
