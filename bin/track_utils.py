@@ -719,6 +719,8 @@ class RoslinWorkflow(object):
         params = self.params
         if 'workflows' not in params:
             self.params['workflows'] = {}
+        if 'requirement_list' not in params:
+            self.params['requirement_list'] = []
         if 'copy_outputs_config' not in params:
             self.params['copy_outputs_config'] = {"log": [{"patterns": ["*.log"], "input_folder": "log"},
                                                           {"patterns": ["*.json"], "input_folder": "log"}],
@@ -727,9 +729,10 @@ class RoslinWorkflow(object):
     def get_workflow_info(self):
         workflow_name = self.__class__.__name__
         workflow_info = self.params['workflows'][workflow_name]
-        workflow_output = workflow_info['output']
-        workflow_filename = workflow_info['filename']
-        return (workflow_filename, workflow_output)
+        return workflow_info
+
+    def modify_dependency_inputs(self,input_yaml_data):
+        return input_yaml_data
 
     def update_copy_outputs_config(self,new_config):
         params = self.params
@@ -831,9 +834,6 @@ class RoslinWorkflow(object):
         last_workflow_job.addFollowOn(roslin_analysis_job)
         return last_workflow_job
 
-    def add_requirement(self,parser):
-        pass
-
     def set_default_job_params(self):
         job_params = {}
         job_params['input_yaml'] = self.params['input_yaml']
@@ -871,6 +871,14 @@ class RoslinWorkflow(object):
         else:
             workflow_job = self.create_job(self.run_cwl,workflow_params,job_params,job_name)
         return (workflow_job,job_params)
+
+    def add_workflow_requirement(parser,requirements_list):
+        for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
+            parser.add_argument(parser_option, type=parser_type, action=parser_action, dest=parser_dest, help=parser_help, required=parser_required)
+        return parser
+
+    def add_requirement(self,parser):
+        return (parser, self.params['requirement_list'])
 
     def create_job(self,function,params,job_params,name):
         jobs_dict = self.jobs
