@@ -815,7 +815,7 @@ class RoslinWorkflow(object):
         sample_summary_path = os.path.join(qc_directory,sample_summary_file)
         debug_mode = params['debug_mode']
         pipeline_bin_path = self.params['env']['ROSLIN_PIPELINE_BIN_PATH']
-        roslin_analysis_script = os.path.join(pipeline_bin_path,'roslin_analysis_helper.py')
+        roslin_analysis_script = os.path.join(pipeline_bin_path,'scripts','roslin_analysis_helper.py')
         roslin_analysis_command = ['python',roslin_analysis_script,
         '--inputs',input_yaml,
         '--maf_directory',maf_directory,
