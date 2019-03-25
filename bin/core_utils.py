@@ -294,10 +294,16 @@ def merge(yaml1, yaml2):
                 merged_yaml[k] = v
             else:
                 merged_yaml[k] = merge(merged_yaml[k],v)
+    if isinstance(yaml1,list) and isinstance(yaml2,list):
+        merged_list = yaml1
+        for single_elem in yaml2:
+            if single_elem not in merged_list:
+                merged_list.append(single_elem)
+        merged_yaml = merged_list
+
     return merged_yaml
 
-def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
-    import ruamel.yaml as yaml
+def create_roslin_yaml(output_meta_list, yaml_file_list):
 
     result = None
     cwd = os.getcwd()
@@ -314,10 +320,7 @@ def create_roslin_yaml(output_meta_list, yaml_location, yaml_file_list):
             yaml_converted = convert_dict(yaml_contents)
             os.chdir(cwd)
             result = merge(result, yaml_converted)
-
-    with open(yaml_location, 'w') as outfile:
-        yaml.dump(result, outfile,  default_flow_style=False)
-
+    return result
 
 def convert_list(sample_list):
     if not sample_list:

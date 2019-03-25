@@ -879,9 +879,11 @@ class RoslinWorkflow(object):
         job_params['jobstore'] = params['jobstore'] + "-" + current_name
         job_output_dir = os.path.join(workflow_output_directory,current_name)
         job_work_dir = os.path.join(self.params['work_dir'],current_name)
+        job_input_yaml = current_name + ".yaml"
         job_params['work_dir'] = job_work_dir
         job_params['output_dir'] = job_output_dir
         job_params['output_meta_json'] = os.path.join(job_output_dir,'output-meta.json')
+        job_params['input_yaml'] = os.path.join(job_output_dir,job_input_yaml)
         job_params['name'] = current_name
         jobs_dict[current_name] = job_params
         roslin_job_obj = RoslinJob(function,params,job_params)
@@ -889,19 +891,23 @@ class RoslinWorkflow(object):
         return roslin_job_obj
 
     def get_input_yaml_from_job(self,params,job_params):
-        output_meta_json_list = job_params['parent_output_meta_json_list']
+        output_meta_json_list = []
         yaml_location = job_params['input_yaml']
         yaml_list = []
+        if 'parent_output_meta_json_list' in job_params:
+            output_meta_json_list = job_params['job_params']
         if 'parent_input_yaml_list' in job_params:
             yaml_list = job_params['parent_input_yaml_list']
         else:
             yaml_list.append(params['input_yaml'])
-
-        create_roslin_yaml(output_meta_json_list,yaml_location,yaml_list)
+        roslin_yaml = create_roslin_yaml(output_meta_json_list,yaml_list)
+        roslin_yaml = self.modify_dependency_inputs(roslin_yaml)
+        save_yaml(yaml_location,roslin_yaml)
         return 0
 
     def run_cwl(self,params,job_params):
         logger = dill.loads(params['logger'])
+        self.get_input_yaml_from_job(params,job_params)
         project_id = params['project_id']
         job_uuid = params['job_uuid']
         pipeline_name_version = params['pipeline_name'] + "/" + params['pipeline_version']
