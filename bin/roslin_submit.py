@@ -40,7 +40,7 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success):
+def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success, use_docker, docker_registry):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, update_run_profile_doc, construct_run_data_doc, construct_run_profile_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
@@ -101,9 +101,18 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
         roslin_leader_command.append('--force-overwrite-results')
     if debug_mode:
         roslin_leader_command.append('--debug-mode')
+    if use_docker:
+        roslin_leader_command.append('--use-docker')
+    if docker_registry:
+        roslin_leader_command.extend(['--docker-registry',docker_registry])
     if test_mode:
         roslin_leader_command.append('--test-mode')
-        roslin_leader_command.extend(['--maxCores',"4"])
+        roslin_leader_command.extend(['--maxCores','4'])
+        if check_yaml_boolean_value(os.environ['ROSLIN_TEST_USE_DOCKER']):
+            roslin_leader_command.append('--use-docker')
+        if os.environ['ROSLIN_TEST_DOCKER_REGISTRY'] != 'None' and os.environ['ROSLIN_TEST_DOCKER_REGISTRY'].strip() != '':
+            docker_registry = os.environ['ROSLIN_TEST_DOCKER_REGISTRY']
+            roslin_leader_command.extend(['--docker-registry',docker_registry])
     for single_requirement_key in requirements_dict:
         requirement_value, requirement_option = requirements_dict[single_requirement_key]
         roslin_leader_command.extend([requirement_option,requirement_value])
@@ -415,6 +424,20 @@ def main():
         help="Python script to run when the workflow succeeds",
         required=False
     )
+    parser.add_argument(
+        "--use-docker",
+        action="store_true",
+        dest="use_docker",
+        help="Use Docker instead of singularity",
+        required=False
+    )
+    parser.add_argument(
+        "--docker-registry",
+        action="store",
+        dest="docker_registry",
+        help="Dockerhub registry to pull ( invoked only with --use-docker)",
+        required=False
+    )
 
     params, _ = parser.parse_known_args()
     check_if_argument_file_exists(params.on_start)
@@ -506,7 +529,7 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
     # submit
-    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml_work_dir, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, params.on_start, params.on_complete, params.on_fail, params.on_success)
+    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml_work_dir, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, params.on_start, params.on_complete, params.on_fail, params.on_success, params.use_docker, params.docker_registry)
 
 if __name__ == "__main__":
 

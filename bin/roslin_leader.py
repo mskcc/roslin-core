@@ -352,7 +352,20 @@ if __name__ == "__main__":
         help="Python script to run when the workflow succeeds",
         required=False
     )
-
+    parser.add_argument(
+        "--use-docker",
+        action="store_true",
+        dest="use_docker",
+        help="Use Docker instead of singularity",
+        required=False
+    )
+    parser.add_argument(
+        "--docker-registry",
+        action="store",
+        dest="docker_registry",
+        help="Dockerhub registry to pull ( invoked only with --use-docker)",
+        required=False
+    )
     options, _ = parser.parse_known_args()
     check_if_argument_file_exists(options.on_start)
     check_if_argument_file_exists(options.on_complete)
@@ -435,6 +448,10 @@ if __name__ == "__main__":
         cwl_batch_system = options.cwl_batch_system
     else:
         cwl_batch_system = options.batch_system
+    if options.use_docker:
+        os.environ['ROSLIN_USE_DOCKER'] = "True"
+    if options.docker_registry:
+        os.environ['DOCKER_REGISTRY_NAME'] = options.docker_registry
     with Toil(options) as toil_obj:
         workflow_failed = False
         workflow_params_path = os.path.join(options.log_folder,"workflow_params.json")
