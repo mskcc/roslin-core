@@ -835,13 +835,27 @@ class RoslinWorkflow(object):
         return last_workflow_job
 
     def set_default_job_params(self):
+        max_mem_str = self.params['max_mem']
+        max_cpu_str = self.params['max_cpu']
+        batch_system = self.params['batch_system']
+        max_mem = int(max_mem_str[:-1]) * 1024
+        max_cpu = int(max_cpu_str)
+        mem_str = '8G'
+        cpu_str = 1
+        mem_in_mb = int(mem_str[:-1]) * 1024
+        if max_mem < mem_in_mb:
+            mem_str = max_mem_str
+        if max_cpu < cpu_str:
+            cpu_str = max_cpu
         job_params = {}
         job_params['input_yaml'] = self.params['input_yaml']
-        job_params['batch_system'] = self.params['batch_system']
+        job_params['batch_system'] = batch_system
         job_params['tmp_dir'] = self.params['tmp_dir']
         job_params['poll_interval'] = 2
-        job_params['memory'] = '8G'
-        job_params['cores'] = 1
+        job_params['memory'] = mem_str
+        job_params['cores'] = cpu_str
+        job_params['max_cores'] = max_cpu_str
+        job_params['max_mem'] = max_mem_str
         job_params['disk'] = '3G'
         job_params['restart'] = False
         job_params['parent_output_meta_json'] = None
@@ -932,6 +946,8 @@ class RoslinWorkflow(object):
         job_restart = job_params['restart']
         job_name = job_params['name']
         log_folder = params['log_folder']
+        max_mem = str(job_params['max_mem'])
+        max_cpu = str(job_params['max_cores'])
         job_store_name = job_jobstore
         job_store_path = os.path.join(job_tmp_dir,job_store_name)
         job_suffix = ''
@@ -958,6 +974,8 @@ class RoslinWorkflow(object):
         "-b",batch_system,
         "-j",job_jobstore,
         "-k",job_work_dir,
+        "-m",max_mem,
+        "-c",max_cpu,
         "-u",job_uuid,
         "-o",job_output_dir]
         if job_restart:

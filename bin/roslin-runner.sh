@@ -39,6 +39,8 @@ OPTIONS:
    -j      Jobstore UUID
    -u      Job UUID
    -k      Toil work directory location
+   -m      Max Mem (e.g. 256G)
+   -c      Max Cores (e.g. 14)
    -r      Restart the workflow with the given job store UUID
    -t      Run pipeline in test mode
    -z      Show list of supported workflows
@@ -52,7 +54,7 @@ EXAMPLE:
 EOF
 }
 
-while getopts “v:w:i:b:o:j:k:rtzd:u:” OPTION
+while getopts “v:w:i:b:o:j:k:m:c:rtzd:u:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
@@ -62,9 +64,11 @@ do
         o) output_directory=$OPTARG ;;
         j) JOBSTORE_ID=$OPTARG ;;
         k) work_dir=$OPTARG ;;
+        m) max_mem=$OPTARG ;;
+        c) max_cores=$OPTARG ;;
         r) restart_options="--restart" ;;
         t) test_mode="True" ;;
-        z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
+        z) cd ${ROSLIN_PIPELINE_CWL_PATH}
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
@@ -87,6 +91,7 @@ then
     exit 1
 fi
 
+pipeline_cwl_path=${ROSLIN_PIPELINE_CWL_PATH}
 # load pipeline settings
 source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
 
@@ -221,13 +226,10 @@ cwltoil \
     ${restart_options} \
     --jobStore file://${jobstore_path} \
     --retryCount 1 \
-    --defaultDisk 24G \
-    --defaultMemory 48G \
-    --defaultCores 1 \
     --maxDisk 128G \
-    --maxMemory 256G \
-    --maxCores 14 \
-    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH SINGULARITY_BIND ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR \
+    --maxMemory ${max_mem} \
+    --maxCores ${max_cores} \
+    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH SINGULARITY_BIND ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR ROSLIN_USE_DOCKER DOCKER_REGISTRY_NAME DOCKER_BIND ROSLIN_PIPELINE_CWL_PATH \
     --no-container \
     --not-strict \
     --disableCaching \
@@ -236,9 +238,10 @@ cwltoil \
     --maxLogFileSize 0 \
     --writeLogs ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
+    --tmpdir-prefix ${work_dir} \
     --workDir ${work_dir} \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
-    ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
+    ${pipeline_cwl_path}/${workflow_filename} \
     ${input_filename} \
     | tee ${output_directory}/output-meta.json
 exit_code=$?

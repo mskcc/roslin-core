@@ -22,10 +22,11 @@ if 'ROSLIN_CORE_BIN_PATH' not in os.environ:
 ROSLIN_CORE_BIN_PATH = os.environ['ROSLIN_CORE_BIN_PATH']
 ROSLIN_CORE_CONFIG_PATH = os.environ['ROSLIN_CORE_CONFIG_PATH']
 sys.path.append(ROSLIN_CORE_BIN_PATH)
-from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists, check_yaml_boolean_value
+from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists, check_yaml_boolean_value, load_yaml, save_yaml
 
-MB_SIZE = (float(1024) ** 2)
-MAX_META_FILE_SIZE = 5 * MB_SIZE
+GB_SIZE_MB = 1024
+MB_SIZE_B = (float(1024) ** 2)
+MAX_META_FILE_SIZE = 5 * MB_SIZE_B
 
 
 logger = logging.getLogger("roslin_submit")
@@ -40,7 +41,49 @@ def cleanup(clean_up_tuple, signal_num, frame):
     print(signal_message)
     send_user_kill_signal(*clean_up_tuple)
 
-def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success, use_docker, docker_registry):
+
+def handle_change_max_memory(work_dir,max_memory_str,max_cpu_str,input_yaml_path,debug_mode):
+    max_memory = int(max_memory_str[:-1]) * GB_SIZE_MB
+    max_cpu = int(max_cpu_str)
+    cwl_directory = os.environ['ROSLIN_PIPELINE_CWL_PATH']
+    new_cwl_directory = os.path.join(work_dir,'cwl')
+    print("Creating a cache for cwl to modify: " + new_cwl_directory)
+    shutil.copytree(cwl_directory,new_cwl_directory)
+    print("Setting cwl to max memory " + str(max_memory) + " and max cpu " + str(max_cpu))
+    for root, dirnames, filenames in os.walk(new_cwl_directory):
+        for single_file in filenames:
+            if '.cwl' in single_file:
+                cwl_file_path = os.path.join(root,single_file)
+                yaml_contents = load_yaml(cwl_file_path)
+                changed = False
+                if 'requirements' in yaml_contents:
+                    if 'ResourceRequirement' in yaml_contents['requirements']:
+                        resource_requirement = yaml_contents['requirements']['ResourceRequirement']
+                        if 'ramMin' in resource_requirement:
+                            if type(resource_requirement['ramMin']) is int:
+                                if int(resource_requirement['ramMin']) > max_memory:
+                                    yaml_contents['requirements']['ResourceRequirement']['ramMin'] = max_memory
+                                    changed = True
+                        if 'coresMin' in resource_requirement:
+                            if type(resource_requirement['coresMin']) is int:
+                                if int(resource_requirement['coresMin']) > max_cpu:
+                                    yaml_contents['requirements']['ResourceRequirement']['coresMin'] = max_cpu
+                                    changed = True
+                if changed:
+                    if debug_mode:
+                        print('Modiying: '+ cwl_file_path)
+                    save_yaml(cwl_file_path,yaml_contents)
+    input_yaml_contents = load_yaml(input_yaml_path)
+    abra_ram_min = input_yaml_contents['runparams']['abra_ram_min']
+    if abra_ram_min > max_memory:
+        print("Modiying input yaml as " + str(abra_ram_min) + " is greater than max memory of " + str(max_memory) )
+        input_yaml_contents['runparams']['abra_ram_min'] = max_memory
+        save_yaml(input_yaml_path,input_yaml_contents)
+    os.environ['ROSLIN_PIPELINE_CWL_PATH'] = new_cwl_directory
+
+
+
+def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success, use_docker, docker_registry, max_mem, max_cpu):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, update_run_profile_doc, construct_run_data_doc, construct_run_profile_doc
     from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
@@ -105,9 +148,12 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
         roslin_leader_command.append('--use-docker')
     if docker_registry:
         roslin_leader_command.extend(['--docker-registry',docker_registry])
+    if max_cpu:
+        roslin_leader_command.extend(['--maxCores',max_cpu])
+    if max_mem:
+        roslin_leader_command.extend(['--maxMemory',max_mem])
     if test_mode:
         roslin_leader_command.append('--test-mode')
-        roslin_leader_command.extend(['--maxCores','4'])
         if check_yaml_boolean_value(os.environ['ROSLIN_TEST_USE_DOCKER']):
             roslin_leader_command.append('--use-docker')
         if os.environ['ROSLIN_TEST_DOCKER_REGISTRY'] != 'None' and os.environ['ROSLIN_TEST_DOCKER_REGISTRY'].strip() != '':
@@ -224,6 +270,12 @@ def targzip_project_files(project_id, project_path):
     input_files['blob'] = tgz_blob
     input_files['files'] = input_file_objs
     return input_files
+
+def mem_format_type(value):
+    if not re.match(r"\d+[gG]",value):
+        print_error(str(value) + " is not in a valid format for --max-mem (e.g. 8G)")
+        raise argparse.ArgumentTypeError
+    return value
 
 
 def get_pipeline_name_and_versions():
@@ -438,7 +490,23 @@ def main():
         help="Dockerhub registry to pull ( invoked only with --use-docker)",
         required=False
     )
-
+    parser.add_argument(
+        "--max-mem",
+        action="store",
+        dest="max_mem",
+        default="256G",
+        help="The maximum amount of memory to request in GB (e.g. 8G)",
+        type=mem_format_type,
+        required=False
+    )
+    parser.add_argument(
+        "--max-cpu",
+        action="store",
+        dest="max_cpu",
+        default="14",
+        help="The maximum amount of cpu to request",
+        required=False
+    )
     params, _ = parser.parse_known_args()
     check_if_argument_file_exists(params.on_start)
     check_if_argument_file_exists(params.on_complete)
@@ -528,8 +596,12 @@ def main():
 
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
+
+    if params.max_mem != parser.get_default('max_mem') or params.max_cpu != parser.get_default('max_cpu'):
+        handle_change_max_memory(work_dir,params.max_mem,params.max_cpu,inputs_yaml_work_dir,params.debug_mode)
+
     # submit
-    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml_work_dir, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, params.on_start, params.on_complete, params.on_fail, params.on_success, params.use_docker, params.docker_registry)
+    submit(project_id, job_uuid, params.project_path, pipeline_name, pipeline_version, params.batch_system, params.cwl_batch_system, jobstore_uuid, restart, params.debug_mode, work_dir, params.workflow_name, inputs_yaml_work_dir, pipeline_settings, input_files_blob, params.foreground_mode,requirements_dict, params.test_mode, params.results_dir, params.force_overwrite_results, params.on_start, params.on_complete, params.on_fail, params.on_success, params.use_docker, params.docker_registry, params.max_mem, params.max_cpu)
 
 if __name__ == "__main__":
 
