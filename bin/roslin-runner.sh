@@ -120,21 +120,6 @@ then
     exit 1
 fi
 
-# check Singularity existstence only if you're not on leader nodes
-# fixme: this is so MSKCC-specific
-leader_node=(luna selene)
-case "${leader_node[@]}" in  *"`hostname -s`"*) leader_node='yes' ;; esac
-
-if [ "$leader_node" != 'yes' ]
-then
-    if [ ! -x "`command -v $ROSLIN_SINGULARITY_PATH`" ]
-    then
-        echo "Unable to find Singularity."
-        echo "ROSLIN_SINGULARITY_PATH=${ROSLIN_SINGULARITY_PATH}"
-        exit 1
-    fi
-fi
-
 if [ ! -d $ROSLIN_CMO_PYTHON_PATH ]
 then
     echo "Can't find python package at $ROSLIN_CMO_PYTHON_PATH"
@@ -158,14 +143,6 @@ batch_sys_options="--batchSystem ${batch_system}"
 
 # get absolute path for output directory
 output_directory=`python -c "import os;print(os.path.abspath('${output_directory}'))"`
-
-# check if output directory already exists
-if [ -d ${output_directory} ]
-then
-    echo "The specified output directory already exists: ${output_directory}"
-    echo "Aborted."
-    exit 1
-fi
 
 # create output directory
 mkdir -p ${output_directory}

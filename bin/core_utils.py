@@ -314,7 +314,7 @@ def create_roslin_yaml(output_meta_list, yaml_file_list):
 
     for input_file in input_file_list:
         if input_file:
-            yaml_contents = yaml.load(input_file)
+            yaml_contents = load_yaml(input_file)
             file_location = os.path.dirname(input_file)
             os.chdir(file_location)
             yaml_converted = convert_dict(yaml_contents)
@@ -426,8 +426,8 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
     if not pipeline_settings:
         return None
-    roslin_pipeline_data_path = pipeline_settings['ROSLIN_PIPELINE_DATA_PATH']
-    roslin_virtualenv_path = os.path.join(roslin_pipeline_data_path,"virtualenv","bin","activate_this.py")
+    roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
+    roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
     execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     return pipeline_settings
 

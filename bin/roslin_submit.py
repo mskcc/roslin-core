@@ -85,7 +85,6 @@ def handle_change_max_memory(work_dir,max_memory_str,max_cpu_str,input_yaml_path
 
 def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, batch_system, cwl_batch_system, jobstore_uuid, restart, debug_mode, work_dir, workflow_name, inputs_yaml, pipeline_settings, input_files_blob, foreground_mode, requirements_dict, test_mode, results_dir, force_overwrite_results, on_start, on_complete, on_fail, on_success, use_docker, docker_registry, max_mem, max_cpu):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, update_run_profile_doc, construct_run_data_doc, construct_run_profile_doc
-    from ruamel.yaml import safe_load
     log_folder = os.path.join(work_dir,'log')
     roslin_bin_path = pipeline_settings['ROSLIN_PIPELINE_BIN_PATH']
     roslin_output_path = os.path.join(work_dir,'outputs')
@@ -189,8 +188,7 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
     user = getpass.getuser()
     hostname = socket.gethostname()
     current_time = get_current_time()
-    with open(inputs_yaml) as input_yaml_file:
-        input_yaml_data = safe_load(input_yaml_file)
+    input_yaml_data = load_yaml(inputs_yaml)
     submission_dict = {"time":current_time,"user":user,"hostname":hostname,"batch_system":batch_system,"env":dict(os.environ),"command":roslin_leader_command,"restart":restart,"run_attempt":run_attempt,"input_yaml":input_yaml_data,"input_meta":input_meta_data,"log_dir":log_folder,"work_dir":work_dir,"project_output_dir":roslin_output_path,"project_results_dir":workflow_results_path,"project_id":project_id,"job_uuid":job_uuid,"pipeline_name":pipeline_name,"pipeline_version":pipeline_version,"workflow":workflow_name}
     with open("submission.json","w") as submission_file:
         json.dump(submission_dict,submission_file)

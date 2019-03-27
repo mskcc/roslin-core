@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import shutil
 import logging
+from builtins import super
 logging.getLogger("rdflib").setLevel(logging.WARNING)
 logging.getLogger("toil.jobStores.fileJobStore").setLevel(logging.WARNING)
 logging.getLogger("toil.jobStores.abstractJobStore").disabled = True
@@ -917,10 +918,10 @@ class RoslinWorkflow(object):
         yaml_location = job_params['input_yaml']
         yaml_list = []
         if 'parent_output_meta_json_list' in job_params:
-            output_meta_json_list = job_params['job_params']
+            output_meta_json_list = job_params['parent_output_meta_json_list']
         if 'parent_input_yaml_list' in job_params:
             yaml_list = job_params['parent_input_yaml_list']
-        else:
+        if not yaml_list:
             yaml_list.append(params['input_yaml'])
         roslin_yaml = create_roslin_yaml(output_meta_json_list,yaml_list)
         roslin_yaml = self.modify_dependency_inputs(roslin_yaml)
@@ -929,7 +930,6 @@ class RoslinWorkflow(object):
 
     def run_cwl(self,params,job_params):
         logger = dill.loads(params['logger'])
-        self.get_input_yaml_from_job(params,job_params)
         project_id = params['project_id']
         job_uuid = params['job_uuid']
         pipeline_name_version = params['pipeline_name'] + "/" + params['pipeline_version']
@@ -965,8 +965,8 @@ class RoslinWorkflow(object):
             new_folder_basename = find_unique_name_in_dir(folder_basename,job_error_folder)
             new_error_folder = os.path.join(job_error_folder,new_folder_basename)
             shutil.move(job_output_dir,new_error_folder)
-        input_yaml_basename = os.path.dirname(params['input_yaml'])
-        convert_yaml_abs_path(job_yaml,input_yaml_basename,job_yaml)
+        os.mkdir(job_output_dir)
+        self.get_input_yaml_from_job(params,job_params)
         roslin_runner_command = ["roslin-runner.sh",
         "-v",pipeline_name_version,
         "-w",job_cwl,
@@ -1131,6 +1131,7 @@ class SingleCWLWorkflow(RoslinWorkflow):
             parent_output_meta_json_list.append(parent_output_meta_json)
         job_params['parent_output_meta_json_list'] = parent_output_meta_json_list
         job_params['parent_input_yaml_list'] = parent_input_yaml_list
+        job_params['cwl'] = workflow_info['filename']
         return self.create_job(self.run_cwl,self.params,job_params,workflow_output)
 
 

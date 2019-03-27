@@ -55,6 +55,13 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
         clean_workflow.set()
         project_killed_message = ""
         project_killed_event = {}
+        work_dir = workflow.params['work_dir']
+        log_dir = os.path.join(work_dir,'log')
+        tmp_dir = workflow.params['tmp_dir']
+        dir_paths = (log_dir,work_dir,tmp_dir)
+        user_kill_signal = check_user_kill_signal(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'], dir_paths)
+        if user_kill_signal and 'user_kill_signal' not in clean_up_dict:
+            clean_up_dict['user_kill_signal'] = user_kill_signal
         if 'user_kill_signal' in clean_up_dict:
             user_kill_signal_dict = clean_up_dict['user_kill_signal']
             user = user_kill_signal_dict['user']

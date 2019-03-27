@@ -44,9 +44,9 @@ shift
 
 tool_info="${tool_name}:${tool_version}"
 
-if [ -z "$ROSLIN_USE_DOCKER" ]
+if [ -n "$ROSLIN_USE_DOCKER" ]
 then
-  if [ -z "$DOCKER_REGISTRY_NAME" ]
+  if [ -n "$DOCKER_REGISTRY_NAME" ]
   then
       docker_image_registry="${DOCKER_REGISTRY_NAME}/${DOCKER_REPO_TOOLNAME_PREFIX}-${tool_info}"
       docker_image_registry_url="docker://${docker_image_registry}"
@@ -54,7 +54,7 @@ then
       docker tag ${docker_image_registry} ${tool_info}
   fi
 
-docker run ${DOCKER_BIND} ${tool_info} "$1" ${@:2}
+docker run -i -w $(pwd) $(echo $DOCKER_BIND) ${tool_info} "$1" ${@:2}
 else
 # start a singularity container with an empty environment
 ${ROSLIN_SINGULARITY_PATH} run \
