@@ -890,13 +890,15 @@ class RoslinWorkflow(object):
             workflow_job = self.create_job(self.run_cwl,workflow_params,job_params,job_name)
         return (workflow_job,job_params)
 
-    def add_workflow_requirement(parser,requirements_list):
+    def add_workflow_requirement(self,parser,requirements_list):
         for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
             parser.add_argument(parser_option, type=parser_type, action=parser_action, dest=parser_dest, help=parser_help, required=parser_required)
         return parser
 
     def add_requirement(self,parser):
-        return (parser, self.params['requirement_list'])
+        requirement_list = self.params['requirement_list']
+        parser = self.add_workflow_requirement(parser,requirement_list)
+        return (parser, requirement_list)
 
     def create_job(self,function,params,job_params,name):
         jobs_dict = self.jobs
@@ -1029,8 +1031,6 @@ class RoslinWorkflow(object):
         error_code = command_output['errorcode']
         return error_code
 
-    def add_requirement(self,parser):
-        pass
     def on_start(self,logger):
         self.run_hook("on_start","on start",logger)
 
