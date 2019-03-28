@@ -693,7 +693,7 @@ def find_unique_name_in_dict(root_name,dict_obj):
 class RoslinWorkflow(object):
     def __init__(self,params):
         if not params:
-            self.params = {}
+            self.params = {'configure':{}}
             self.configure()
         else:
             output_dir = params['output_dir']
