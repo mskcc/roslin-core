@@ -272,7 +272,7 @@ def targzip_project_files(project_id, project_path):
 def mem_format_type(value):
     if not re.match(r"\d+[gG]",value):
         print_error(str(value) + " is not in a valid format for --max-mem (e.g. 8G)")
-        raise argparse.ArgumentTypeError
+        exit(1)
     return value
 
 

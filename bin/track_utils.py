@@ -693,28 +693,30 @@ def find_unique_name_in_dict(root_name,dict_obj):
 class RoslinWorkflow(object):
     def __init__(self,params):
         if not params:
-            return
-        output_dir = params['output_dir']
-        params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
-        workflow_name = params['workflow_name']
-        log_folder = params['log_folder']
-        if 'configure' not in params:
-            params['configure'] = {}
-        if 'logger' not in params:
-            if params['debug_mode']:
-                logging_level = logging.DEBUG
-            else:
-                logging_level = logging.INFO
-            logger = logging.getLogger(workflow_name)
-            log_file = workflow_name +".log"
-            log_path = os.path.join(log_folder,log_file)
-            logger.setLevel(logging_level)
-            add_file_handler(logger,log_path,None,logging_level)
-            params['logger'] = dill.dumps(logger)
-            params['log_file'] = log_path
-        self.jobs = {}
-        self.params = params
-        self.configure()
+            self.params = {}
+            self.configure()
+        else:
+            output_dir = params['output_dir']
+            params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
+            workflow_name = params['workflow_name']
+            log_folder = params['log_folder']
+            if 'configure' not in params:
+                params['configure'] = {}
+            if 'logger' not in params:
+                if params['debug_mode']:
+                    logging_level = logging.DEBUG
+                else:
+                    logging_level = logging.INFO
+                logger = logging.getLogger(workflow_name)
+                log_file = workflow_name +".log"
+                log_path = os.path.join(log_folder,log_file)
+                logger.setLevel(logging_level)
+                add_file_handler(logger,log_path,None,logging_level)
+                params['logger'] = dill.dumps(logger)
+                params['log_file'] = log_path
+            self.jobs = {}
+            self.params = params
+            self.configure()
 
     def configure(self):
         params = self.params
@@ -738,11 +740,12 @@ class RoslinWorkflow(object):
     def update_copy_outputs_config(self,new_config):
         params = self.params
         copy_outputs_config = params['copy_outputs_config']
-        for single_key in new_config:
-            folder_config = new_config[single_key]
-            if single_key not in copy_outputs_config:
-                copy_outputs_config[single_key] = []
-            copy_outputs_config[single_key].extend(folder_config)
+        if new_config:
+            for single_key in new_config:
+                folder_config = new_config[single_key]
+                if single_key not in copy_outputs_config:
+                    copy_outputs_config[single_key] = []
+                copy_outputs_config[single_key].extend(folder_config)
         self.params['copy_outputs_config'] = copy_outputs_config
 
     def copy_workflow_outputs(self,last_workflow_job):
@@ -800,7 +803,7 @@ class RoslinWorkflow(object):
                     worker_job_params['worker_num'] = single_worker_num
                     roslin_job_obj = RoslinJob(copy_outputs,params,worker_job_params)
                     roslin_job_obj.__dict__['jobName'] = job_name
-                    last_workflow_job.addFollowOn(roslin_job_obj)
+                    last_workflow_job.addChild(roslin_job_obj)
         return last_workflow_job
 
     def roslin_analysis(self,last_workflow_job):
@@ -1092,6 +1095,7 @@ class SingleCWLWorkflow(RoslinWorkflow):
     def get_inputs(self,dependency_list):
         requirement_list = []
         dependency_key_list = []
+        workflow_name = self.__class__.__name__
         for single_dependency in dependency_list:
             dependency_snake_case = convert_to_snake_case(single_dependency)
             dependency_param = '--use_{}_meta'.format(dependency_snake_case)
@@ -1115,7 +1119,8 @@ class SingleCWLWorkflow(RoslinWorkflow):
                 input_yaml = workflow_params['input_yaml']
                 single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
                 dependency_list.append(single_dependency_info)
-        return self.get_job(dependency_list,job_params=job_params)
+        roslin_job_obj, job_params = self.get_job(dependency_list,job_params=job_params)
+        return roslin_job_obj
 
     def get_job(self,dependency_param_list,job_params=None):
         if not job_params:
@@ -1132,7 +1137,8 @@ class SingleCWLWorkflow(RoslinWorkflow):
         job_params['parent_output_meta_json_list'] = parent_output_meta_json_list
         job_params['parent_input_yaml_list'] = parent_input_yaml_list
         job_params['cwl'] = workflow_info['filename']
-        return self.create_job(self.run_cwl,self.params,job_params,workflow_output)
+        roslin_job_obj = self.create_job(self.run_cwl,self.params,job_params,workflow_output)
+        return (roslin_job_obj, job_params)
 
 
 class ReadOnlyFileJobStore(FileJobStore):

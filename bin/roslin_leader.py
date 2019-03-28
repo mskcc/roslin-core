@@ -475,9 +475,10 @@ if __name__ == "__main__":
         roslin_track = Thread(target=roslin_track, args=([logger, toil_obj, track_leader, job_store, options.project_uuid, clean_up_dict, roslin_workflow, project_workdir, project_tmpdir]))
         roslin_job = roslin_workflow.run_pipeline()
         roslin_workflow_params = copy.deepcopy(roslin_workflow.params)
+        del roslin_workflow_params['requirement_list']
         del roslin_workflow_params['logger']
         with open(workflow_params_path,"w") as workflow_params_file:
-            json.dump(roslin_workflow_params,workflow_params_file)
+            json.dump(roslin_workflow_params,workflow_params_file, default=lambda x: None)
         update_workflow_params(logger,options.project_uuid,roslin_workflow_params)
         update_run_results_status(logger,options.project_uuid,pending_status)
         try:

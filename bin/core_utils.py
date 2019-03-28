@@ -15,6 +15,7 @@ import socket
 import glob
 import getpass
 import traceback
+import re
 
 starting_log_message="------------ starting ------------"
 exiting_log_message="------------ exiting ------------"
@@ -246,7 +247,7 @@ def save_yaml(yaml_path,yaml_data):
         yaml.dump(yaml_data, yaml_file)
 
 def convert_to_snake_case(input_str):
-    first_str = re.sub('(.)[A-Z][a-z]+)',r'\1_\2',name)
+    first_str = re.sub('(.)([A-Z][a-z]+)',r'\1_\2',input_str)
     second_str = re.sub('([a-z0-9])([A-Z])',r'\1_\2',first_str).lower()
     return second_str
 
