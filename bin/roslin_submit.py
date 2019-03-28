@@ -57,17 +57,26 @@ def handle_change_max_memory(work_dir,max_memory_str,max_cpu_str,input_yaml_path
                 yaml_contents = load_yaml(cwl_file_path)
                 changed = False
                 if 'requirements' in yaml_contents:
-                    if 'ResourceRequirement' in yaml_contents['requirements']:
-                        resource_requirement = yaml_contents['requirements']['ResourceRequirement']
+                    resource_requirement = None
+                    requirements_obj = yaml_contents['requirements']
+                    if type(requirements_obj) is list:
+                        for single_item in requirements_obj:
+                            if 'class' in single_item:
+                                if single_item['class'] == 'ResourceRequirement':
+                                    resource_requirement = single_item
+                    if type(requirements_obj) is dict:
+                        if 'ResourceRequirement' in yaml_contents['requirements']:
+                            resource_requirement = yaml_contents['requirements']['ResourceRequirement']
+                    if resource_requirement:
                         if 'ramMin' in resource_requirement:
                             if type(resource_requirement['ramMin']) is int:
                                 if int(resource_requirement['ramMin']) > max_memory:
-                                    yaml_contents['requirements']['ResourceRequirement']['ramMin'] = max_memory
+                                    resource_requirement['ramMin'] = max_memory
                                     changed = True
                         if 'coresMin' in resource_requirement:
                             if type(resource_requirement['coresMin']) is int:
                                 if int(resource_requirement['coresMin']) > max_cpu:
-                                    yaml_contents['requirements']['ResourceRequirement']['coresMin'] = max_cpu
+                                    resource_requirement['coresMin'] = max_cpu
                                     changed = True
                 if changed:
                     if debug_mode:
