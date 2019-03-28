@@ -2,7 +2,7 @@
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
-from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists
+from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists, check_tmp_env
 from toil.common import Toil
 from toil.job import Job, JobNode
 from toil.leader import FailedJobsException
@@ -388,6 +388,7 @@ if __name__ == "__main__":
     logger_file_monitor = logging.getLogger("roslin_leader_monitor")
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
     sys.path.append(pipeline_settings['ROSLIN_PIPELINE_BIN_PATH'])
+    check_tmp_env(logger)
     import roslin_workflows
     roslin_workflow_class = getattr(roslin_workflows,options.workflow_name)
     workflow_parser = argparse.ArgumentParser(parents=[ parser ], add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)

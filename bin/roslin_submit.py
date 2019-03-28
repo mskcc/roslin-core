@@ -512,6 +512,7 @@ def main():
     check_if_argument_file_exists(params.on_success)
     check_if_argument_file_exists(params.inputs_yaml)
     inputs_yaml = os.path.abspath(params.inputs_yaml)
+    check_tmp_env(None)
     roslin_workflow_class = getattr(roslin_workflows,params.workflow_name)
     roslin_workflow = roslin_workflow_class(None)
     workflow_parser = argparse.ArgumentParser(parents=[ parser ], add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)

@@ -250,6 +250,20 @@ def convert_to_snake_case(input_str):
     second_str = re.sub('([a-z0-9])([A-Z])',r'\1_\2',first_str).lower()
     return second_str
 
+def check_tmp_env(logger=None):
+    error_message = ""
+    if 'TMP' in os.environ:
+        if not os.path.exists(os.environ['TMP']):
+            error_message = error_message + "TMP env: {} not found".format(os.environ['TMP'])
+    if 'TMPDIR' in os.environ:
+        if not os.path.exists(os.environ['TMPDIR']):
+            error_message = error_message + "TMPDIR env: {} not found".format(os.environ['TMPDIR'])
+    if error_message:
+        if logger:
+            from track_utils import log
+            log(logger,'error',error_message)
+        else:
+            print_error(error_message)
 
 def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version, termination_graceful):
     log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
