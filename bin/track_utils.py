@@ -1120,6 +1120,9 @@ class SingleCWLWorkflow(RoslinWorkflow):
                 single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
                 dependency_list.append(single_dependency_info)
         roslin_job_obj, job_params = self.get_job(dependency_list,job_params=job_params)
+        roslin_job_obj = self.copy_workflow_outputs(roslin_job_obj)
+        if run_analysis:
+            roslin_job_obj = self.roslin_analysis(roslin_job_obj)
         return roslin_job_obj
 
     def get_job(self,dependency_param_list,job_params=None):
