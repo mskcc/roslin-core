@@ -37,7 +37,8 @@ def configure_setup_settings(settings):
         core_version=settings["version"],
         roslin_root=settings["ROSLIN_CORE_ROOT"],
         core_redis_host=settings["redis"]["host"],
-        core_redist_port=settings["redis"]["port"]        
+        core_redist_port=settings["redis"]["port"],
+        roslin_core_root=settings["root"]
     )
 
     write_to_disk("config/settings.sh", content)

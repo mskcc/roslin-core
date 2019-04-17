@@ -1,4 +1,5 @@
 version: 2.0.6
+root: /ifs/work/pi/roslin-core
 redis:
   host: "pitchfork"
   port: 9006
