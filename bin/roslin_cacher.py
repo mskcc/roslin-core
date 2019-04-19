@@ -26,39 +26,16 @@ def poll(lsf_queue, only_me):
         "-noheader"
     ]
     
-    bjobs_control = [
-         "bjobs",
-         "-a",
-         "-o", "user jobid proj_name job_name stat submit_time start_time finish_time run_time effective_resreq exec_host delimiter='\t'",
-         "-q", "controlR",
-         "-noheader"
-    ]
-
-    bjobs_jenkins_control = [
-         "bjobs",
-	 "-a",
-	 "-o",
-	 "user jobid proj_name job_name stat submit_time start_time finish_time run_time effective_resreq exec_host delimiter='\t'",
-	 "-q", "controlR",
-	 "-noheader"
-     ]
-    
     if not only_me:
         bjobs_jenkins = copy.copy(bjobs)
         bjobs.extend(["-u", "HAYSTACK"])
-        bjobs_control.extend(["-u","HAYSTACK"])
         bjobs_jenkins.extend(["-u", "jenkins"])
-        bjobs_jenkins_control.extend(["-u", "jenkins"])
 
     process = subprocess.Popen(bjobs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     data = process.stdout.read()
-    control_process = subprocess.Popen(bjobs_control, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    control_data = control_process.stdout.read()
     jenkins_process = subprocess.Popen(bjobs_jenkins, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     jenkins_data = jenkins_process.stdout.read()
-    jenkins_control_process = subprocess.Popen(bjobs_jenkins_control, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    jenkins_control_data = jenkins_control_process.stdout.read()	
-    combined_data = data + control_data + jenkins_data + jenkins_control_data
+    combined_data = data + jenkins_data
     # compress and base64
     msg = base64.b64encode(zlib.compress(combined_data))
 
