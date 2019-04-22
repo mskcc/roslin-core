@@ -27,16 +27,16 @@ roslin_done_path = "/ifs/work/pi/roslin-internal-services/roslin-done.py"
 def run_popen(name,command,log_stdout,log_stderr,shell):
     logger.info('---------- Running '+ name + ' ----------')
     logger.info('Args: '+ ' '.join(command))
-    single_process = Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell)
+    single_process = subprocess.Popen(command, stdout=log_stdout,stderr=log_stderr, shell=shell)
     output = None
     error = None
     errorcode = None
     output, error = single_process.communicate()
     errorcode = single_process.returncode
-    if errorcode != 0:
+    if errorcode == 0:
         logger.info(name + ' passed')
     else:
-        logger.info(name + ' failed')
+        logger.info(name + ' failed with errorcode ' + str(errorcode))
     if output:
         logger.info("----- "+name+" stdout -----\n" + str(output))
     if error:
