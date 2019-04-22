@@ -246,7 +246,6 @@ cwltoil \
     --not-strict \
     --cleanWorkDir onSuccess \
     --disableCaching \
-    --linkImports \
     --disableChaining \
     --realTimeLogging \
     --maxLogFileSize 0 \
