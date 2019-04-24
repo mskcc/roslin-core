@@ -92,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument('--disable_portal_repo_update', default=False, action='store_true', help='If not updating cbioportal, skips submitting request to update the Mercurial repo.')
     parser.add_argument('--enable_slack_update', default=False, action='store_true', help='Send project status info to slack')
     parser.add_argument('--portal_repo_path',required=False,help='Path for the portal repo (insead of using the one specified in roslin resources)')
+    parser.add_argument('--stable_id',required=False,help='Override stableid that usually contains pi_xx_xx (usually for merges), but still use pi/xx/xx for merc path')
     params = parser.parse_args()
     disable_jira_update = params.disable_jira_update
     disable_portal_repo_update = params.disable_portal_repo_update
@@ -131,5 +132,8 @@ if __name__ == "__main__":
     analysis_helper_args['disable_portal_repo_update'] = params.disable_portal_repo_update
     if params.portal_repo_path:
         analysis_helper_args['portal_repo_path'] = params.portal_repo_path
+    if params.stable_id:
+        analysis_helper_args['stable_id'] = params.stable_id
+
     run_analysis_helper(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name)
     run_roslin_done(output_directory,project_name,log_path,disable_portal_repo_update,disable_jira_update,enable_slack_update)
