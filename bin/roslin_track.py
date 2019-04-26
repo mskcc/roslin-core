@@ -153,31 +153,27 @@ def get_lsf_job_info(lsf_job_id):
 def get_cwltoil_log_path(stderr_log_path):
     "get path to cwltoil log and jobstore id"
 
-    cwltoil_log_path = None
+    cwltoil_log_path = os.path.join(stderr_log_path[0:-11],"outputs","log","cwltoil.log")
 
     # 1-indexed
-    line_num = 0
+    # line_num = 0
 
     # make sure lazy loading because log file can be huge
-    try:
-        with open(stderr_log_path, "rt") as flog:
-            for line in flog:
-                line_num += 1
-
-                # fixme: pre-compile regex
-
-                # INFO:toil.lib.bioio:Logging to file
-                # '/ifs/work/chunj/prism-proto/ifs/prism/inputs/chunj/examples/_tracking_test/5dff7de4/5dff7de4-4b93-11e7-8c71-8cdcd4013cd4/outputs/log/cwltoil.log'.
-                match = re.search(r"INFO toil.lib.bioio: Logging to file '(.*?)'.", line)
-                if match:
-                    cwltoil_log_path = match.group(1)
-
-                # exit if found or line number > 20
-                if (cwltoil_log_path) or line_num > 20:
-                    break
-
-    except Exception as e:
-        logger.error(e)
+    # try:
+    #    with open(stderr_log_path, "rt") as flog:
+    #        for line in flog:
+    #            line_num += 1
+    # fixme: pre-compile regex
+    # INFO:toil.lib.bioio:Logging to file
+    # '/ifs/work/chunj/prism-proto/ifs/prism/inputs/chunj/examples/_tracking_test/5dff7de4/5dff7de4-4b93-11e7-8c71-8cdcd4013cd4/outputs/log/cwltoil.log'.
+    #            match = re.search(r"INFO toil.lib.bioio: Logging to file '(.*?)'.", line)
+    #            if match:
+    #                cwltoil_log_path = match.group(1)
+    # exit if found or line number > 20
+    #            if (cwltoil_log_path) or line_num > 20:
+    #                break
+    #    except Exception as e:
+    #    logger.error(e)
 
     return cwltoil_log_path
 
