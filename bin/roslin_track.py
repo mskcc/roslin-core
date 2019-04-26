@@ -493,7 +493,11 @@ def main():
                 redis_client.publish('roslin-run-results', json.dumps(prj))
 
                 # screen output for debugging
-                print "  {}:{} ({} secs) ({})".format(prj["projectId"], job_uuid, prj["timestamp"]["duration"], prj["status"])
+		duration = "NA"
+		if "timestamp" in prj:
+			if "duration" in prj["timestamp"]:
+				duration = prj["timestamp"]["duration"]
+		print "  {}:{} ({} secs) ({})".format(prj["projectId"], job_uuid, duration, prj["status"])
 
                 for lsf_job_id in prj["batchSystemJobs"]:
                     lsf_job = prj["batchSystemJobs"][lsf_job_id]
