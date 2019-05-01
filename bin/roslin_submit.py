@@ -27,7 +27,9 @@ from core_utils import load_pipeline_settings, copy_ignore_same_file, run_comman
 GB_SIZE_MB = 1024
 MB_SIZE_B = (float(1024) ** 2)
 MAX_META_FILE_SIZE = 5 * MB_SIZE_B
-
+JOBSTORE_UUID_FILE_NAME = 'jobstore_uuid'
+INPUT_YAML_FILE_NAME = 'inputs.yaml'
+WORKFLOW_PARAMS_FILE_NAME = 'workflow_params.json'
 
 logger = logging.getLogger("roslin_submit")
 
@@ -373,8 +375,8 @@ def main():
         "--inputs",
         action="store",
         dest="inputs_yaml",
-        help="The path to your input yaml file (e.g. /ifs/projects/CMO/Proj_5088_B/inputs.yaml)",
-        required=True
+        help="The path to your input yaml file ( required on non-restart runs )",
+        required=False
     )
 
     parser.add_argument(
@@ -382,8 +384,8 @@ def main():
         action="store",
         dest="workflow_name",
         choices=list(roslin_workflow_list),
-        help="Workflow name (e.g. project-workflow)",
-        required=True
+        help="Workflow name ( required on non-restart runs )",
+        required=False
     )
 
     parser.add_argument(
@@ -515,12 +517,48 @@ def main():
         required=False
     )
     params, _ = parser.parse_known_args()
+    project_id = params.project_id
+    restart_job_uuid = params.restart_job_uuid
+    work_base_dir = os.path.abspath(pipeline_settings["ROSLIN_PIPELINE_OUTPUT_PATH"])
+    inputs_yaml = None
+    if not restart_job_uuid:
+        error_message_template = "ERROR: Argument: {} , is not specified. This is required for non-restart runs."
+        if not params.inputs_yaml:
+            print_error(error_message_template.format("--inputs"))
+            sys.exit(1)
+        if not params.workflow_name:
+            print_error(error_message_template.format("--workflow"))
+            sys.exit(1)
+        # create a new unique job uuid
+        jobstore_uuid = str(uuid.uuid1())
+        job_uuid = str(uuid.uuid1())
+        restart = False
+        inputs_yaml = os.path.abspath(params.inputs_yaml)
+    else:
+        previous_work_base_dir = os.path.join(work_base_dir, restart_job_uuid[:8], restart_job_uuid)
+        error_extra_info =  "for " + pipeline_name + " (" + pipeline_version + ") "
+        if not os.path.exists(previous_work_base_dir):
+            print_error("ERROR: Could not find project with uuid: " + restart_job_uuid + error_extra_info)
+            exit(1)
+        previous_jobstore_uuid_path = os.path.join(previous_work_base_dir,JOBSTORE_UUID_FILE_NAME)
+        if not os.path.exists(previous_jobstore_uuid_path):
+            print_error("ERROR: Could not find jobstore uuid file ( " + JOBSTORE_UUID_FILE_NAME +  " ) in "+previous_work_base_dir +"\n"+error_extra_info)
+            exit(1)
+        with open(previous_jobstore_uuid_path) as previous_jobstore_uuid_file:
+            jobstore_uuid = previous_jobstore_uuid_file.readline().strip()
+        job_uuid = restart_job_uuid
+        restart = True
+        input_yaml = os.path.abspath(os.path.join(previous_work_base_dir,INPUT_YAML_FILE_NAME))
+        workflow_params_path = os.path.abspath(os.path.join(previous_work_base_dir,"log",WORKFLOW_PARAMS_FILE_NAME))
+        with open(workflow_params_path) as workflow_params_file:
+            workflow_params_data = json.load(workflow_params_file)
+    inputs_yaml_dirname = os.path.dirname(inputs_yaml)
+    inputs_yaml_basename = os.path.basename(inputs_yaml)
     check_if_argument_file_exists(params.on_start)
     check_if_argument_file_exists(params.on_complete)
     check_if_argument_file_exists(params.on_fail)
     check_if_argument_file_exists(params.on_success)
-    check_if_argument_file_exists(params.inputs_yaml)
-    inputs_yaml = os.path.abspath(params.inputs_yaml)
+    check_if_argument_file_exists(inputs_yaml)
     check_tmp_env(None)
     roslin_workflow_class = getattr(roslin_workflows,params.workflow_name)
     roslin_workflow = roslin_workflow_class(None)
@@ -529,45 +567,23 @@ def main():
     requirements_dict = {}
     if requirements_obj:
         workflow_parser, requirements_list = requirements_obj
-        workflow_params = workflow_parser.parse_args()
+        if restart_job_uuid:
+            workflow_params = workflow_params_data
+        else:
+            workflow_params = workflow_parser.parse_args().__dict__
         for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
             workflow_param_key = parser_dest
-            workflow_param_value = workflow_params.__dict__[workflow_param_key]
+            workflow_param_value = workflow_params[workflow_param_key]
             if is_path:
                 if not os.path.exists(workflow_param_value):
                     print_error("ERROR: Could not find "+ str(workflow_param_value))
                     sys.exit(1)
                 workflow_param_value = os.path.abspath(workflow_param_value)
             requirements_dict[workflow_param_key] = (workflow_param_value, parser_option)
-    project_id = params.project_id
-    restart_job_uuid = params.restart_job_uuid
-    inputs_yaml_dirname = os.path.dirname(inputs_yaml)
-    inputs_yaml_basename = os.path.basename(inputs_yaml)
 
     if params.force_overwrite_results and not params.results_dir:
         print_error("ERROR: You need to specify an output directory to force overwrite")
         sys.exit(1)
-
-    work_base_dir = os.path.abspath(pipeline_settings["ROSLIN_PIPELINE_OUTPUT_PATH"])
-    # create a new unique job uuid
-    if not restart_job_uuid:
-        jobstore_uuid = str(uuid.uuid1())
-        job_uuid = str(uuid.uuid1())
-        restart = False
-    else:
-        previous_work_base_dir = os.path.join(work_base_dir, restart_job_uuid[:8], restart_job_uuid)
-        error_extra_info =  "for " + pipeline_name + " (" + pipeline_version + ") "
-        if not os.path.exists(previous_work_base_dir):
-            print_error("ERROR: Could not find project with uuid: " + restart_job_uuid + error_extra_info)
-            exit(1)
-        previous_jobstore_uuid_path = os.path.join(previous_work_base_dir,"jobstore_uuid")
-        if not os.path.exists(previous_jobstore_uuid_path):
-            print_error("ERROR: Could not find jobstore_uuid file in "+previous_work_base_dir +"\n"+error_extra_info)
-            exit(1)
-        with open(previous_jobstore_uuid_path) as previous_jobstore_uuid_file:
-            jobstore_uuid = previous_jobstore_uuid_file.readline().strip()
-        job_uuid = restart_job_uuid
-        restart = True
 
     work_dir = os.path.join(work_base_dir, job_uuid[:8], job_uuid)
     # create only if work_dir does not exist
@@ -591,7 +607,8 @@ def main():
     else:
         project_path = None
 
-    jobstore_uuid_path = os.path.join(work_dir,'jobstore_uuid')
+    jobstore_uuid_path = os.path.join(work_dir,JOBSTORE_UUID_FILE_NAME)
+    input_yaml_path = os.path.join(work_dir,INPUT_YAML_FILE_NAME)
     with open(jobstore_uuid_path,"w") as jobstore_uuid_file:
         jobstore_uuid_file.write(jobstore_uuid)
 
@@ -601,6 +618,9 @@ def main():
     convert_yaml_abs_path(inputs_yaml,work_dir,inputs_yaml)
     copy_ignore_same_file(inputs_yaml,inputs_yaml_work_dir)
     #convert_examples_to_use_abs_path(inputs_yaml)
+
+    if not input_yaml_path:
+        os.rename(inputs_yaml_work_dir,input_yaml_path)
 
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
