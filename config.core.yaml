@@ -1,4 +1,5 @@
 version: 2.1.0
+root: /ifs/work/pi/roslin-core
 mongo:
   host: "pitchfork.mskcc.org"
   port: 27017

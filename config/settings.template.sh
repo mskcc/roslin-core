@@ -3,7 +3,7 @@
 export ROSLIN_CORE_VERSION="{{ core_version }}"
 
 # path to all the Roslin Core versions are/will be installed
-export ROSLIN_CORE_ROOT="{{ roslin_root }}/roslin-core"
+export ROSLIN_CORE_ROOT="{{ roslin_core_root }}"
 
 # path for a specific version of Roslin Core
 export ROSLIN_CORE_PATH="${ROSLIN_CORE_ROOT}/${ROSLIN_CORE_VERSION}"

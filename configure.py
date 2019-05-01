@@ -35,6 +35,7 @@ def configure_setup_settings(settings):
     # render
     content = template.render(
         core_version=settings["version"],
+        roslin_core_root=settings["root"],
         roslin_root=settings["ROSLIN_CORE_ROOT"],
         core_mongo_host=settings["mongo"]["host"],
         core_mongo_port=settings["mongo"]["port"],
