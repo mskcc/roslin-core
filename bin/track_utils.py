@@ -1075,12 +1075,13 @@ class RoslinWorkflow(object):
 
 class SingleCWLWorkflow(RoslinWorkflow):
 
-    def configure(self,workflow_output_folder,cwl_filename,dependency_list):
+    def configure(self,workflow_output_folder,cwl_type,cwl_filename,single_dependency_list,multi_dependency_list):
         super().configure()
         workflow_name = self.__class__.__name__
         output_config = self.get_outputs(workflow_output_folder)
-        input_config, dependency_key_list = self.get_inputs(dependency_list)
-        workflow_info = {'output':workflow_output_folder,'filename':cwl_filename,'dependency':dependency_list,'dependency_key_list':dependency_key_list,'output_config':output_config,'input_config':input_config}
+        input_config, dependency_key_list = self.get_inputs(single_dependency_list,multi_dependency_list)
+        cwl_path = os.path.join(cwl_type,cwl_filename)
+        workflow_info = {'output':workflow_output_folder,'filename':cwl_path,'single_dependency':single_dependency_list,'multi_dependency':multi_dependency_list,'dependency_key_list':dependency_key_list,'output_config':output_config,'input_config':input_config}
         self.params['workflows'][workflow_name] = workflow_info
         self.params['requirement_list'] = input_config
         self.update_copy_outputs_config(output_config)
@@ -1092,16 +1093,21 @@ class SingleCWLWorkflow(RoslinWorkflow):
                                  {"patterns": ["output-meta.json","settings","job-uuid","job-store-uuid","*.yaml"], "input_folder": workflow_output_path, "output_folder": workflow_output_folder}] }
         return output_config
 
-    def get_inputs(self,dependency_list):
+    def get_inputs(self,single_dependency_list,multi_dependency_list):
         requirement_list = []
         dependency_key_list = []
         workflow_name = self.__class__.__name__
-        for single_dependency in dependency_list:
-            dependency_snake_case = convert_to_snake_case(single_dependency)
+        dependency_list = single_dependency_list + multi_dependency_list
+        for dependency in dependency_list:
+            dependency_snake_case = convert_to_snake_case(dependency)
             dependency_param = '--use_{}_meta'.format(dependency_snake_case)
             dependency_key = '{}_meta'.format(dependency_snake_case)
-            dependency_description = "The path to the {} outputs meta file that you need for this run ( since this is a intermediate workflow )".format(workflow_name.lower())
-            dependency_requirement = ("store",str,dependency_key,dependency_param,dependency_description, True, True)
+            if dependecy in single_dependency_list:
+                dependency_description = "The path to the {} outputs meta file that you need for this run ( since this is a intermediate workflow )".format(workflow_name.lower())
+                dependency_requirement = ("store",str,dependency_key,dependency_param,dependency_description, True, True)
+            else:
+                dependency_description = "The path to all the {} outputs meta file that you need for this run ( since this is a intermediate workflow ). You can specify this argument multiple times".format(workflow_name.lower())
+                dependency_requirement = ("append",str,dependency_key,dependency_param,dependency_description, True, True)
             requirement_list.append(dependency_requirement)
             dependency_key_list.append(dependency_key)
         return (requirement_list, dependency_key_list)
@@ -1115,10 +1121,15 @@ class SingleCWLWorkflow(RoslinWorkflow):
         dependency_list = []
         for single_dependency_key in dependency_key_list:
             if '_meta' in single_dependency_key:
-                meta_json = workflow_params[single_dependency_key]
+                meta_json = workflow_params['requirements'][single_dependency_key]
                 input_yaml = workflow_params['input_yaml']
-                single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
-                dependency_list.append(single_dependency_info)
+                if isinstance(meta_json,list):
+                    for single_meta_input in meta_json:
+                        single_dependency_info = {'output_meta_json':single_meta_input,'input_yaml':input_yaml}
+                        dependency_list.append(single_dependency_info)
+                else:
+                    single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
+                    dependency_list.append(single_dependency_info)
         roslin_job_obj, job_params = self.get_job(dependency_list,job_params=job_params)
         roslin_job_obj = self.copy_workflow_outputs(roslin_job_obj)
         if run_analysis:
