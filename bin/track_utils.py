@@ -1525,12 +1525,13 @@ class RoslinTrack():
                             job_state_path = os.path.join(root,single_file)
                             tool_key = None
                             job_stream_path = ""
-                            with open(job_state_path,'rb') as job_state_file:
-                                job_state_contents = dill.load(job_state_file)
-                                job_state = job_state_contents
-                                job_stream_path = job_state_contents['jobName']
-                                if job_stream_path in jobs_path:
-                                    tool_key = jobs_path[job_stream_path]
+                            if os.path.exists(job_state_path):
+                                with open(job_state_path,'rb') as job_state_file:
+                                    job_state_contents = dill.load(job_state_file)
+                                    job_state = job_state_contents
+                                    job_stream_path = job_state_contents['jobName']
+                                    if job_stream_path in jobs_path:
+                                        tool_key = jobs_path[job_stream_path]
                             if tool_key:
                                 if tool_key in job_dict:
                                     tool_dict = job_dict[tool_key]
