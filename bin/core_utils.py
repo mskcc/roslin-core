@@ -310,10 +310,12 @@ def merge(yaml1, yaml2):
             else:
                 merged_yaml[k] = merge(merged_yaml[k],v)
     if isinstance(yaml1,list) and isinstance(yaml2,list):
-        merged_list = yaml1
-        for single_elem in yaml2:
-            if single_elem not in merged_list:
-                merged_list.append(single_elem)
+        merged_list = []
+        merged_list.append(yaml1)
+        merged_list.append(yaml2)
+        #for single_elem in yaml2:
+        #    if single_elem not in merged_list:
+        #        merged_list.append(single_elem)
         merged_yaml = merged_list
 
     return merged_yaml
@@ -368,8 +370,7 @@ def convert_dict(sample_dict):
             sample_obj = convert_list(sample_obj)
         new_dict[single_key] = sample_obj
     if 'class' in new_dict:
-        if new_dict['class'] == 'File':
-            #print(new_dict)
+        if new_dict['class'] == 'File' or new_dict['class'] == 'Directory':
             if 'location' in new_dict:
                 file_key = 'location'
             elif 'path' in new_dict:
@@ -386,6 +387,9 @@ def convert_dict(sample_dict):
                 else:
                     new_location_path = abs_path
                 new_dict[file_key] = new_location_path
+            if 'listing' in new_dict:
+                new_list = convert_list(new_dict['listing'])
+                new_dict['listing'] = new_list
     return new_dict
 
 def convert_yaml_abs_path(inputs_yaml_path,base_dir,new_inputs_yaml_path):
