@@ -294,6 +294,32 @@ def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_ve
         save_json(user_log_path,user_termination_json)
         kill_project(project_name,project_uuid,work_dir,batch_system,user_termination_json,tmp_path,termination_graceful)
 
+def list_depth(input_list):
+    if isinstance(input_list, list):
+        if len(input_list) == 0:
+            return 1
+        else:
+            return 1 + max(list_depth(single_item) for single_item in input_list)
+    else:
+        return 0
+
+def merge_yaml_list(yaml_list):
+    result = None
+    cwd = os.getcwd()
+
+    #yaml_data = []
+
+    for single_file in yaml_list:
+        if single_file:
+            yaml_contents = load_yaml(single_file)
+            file_location = os.path.dirname(single_file)
+            os.chdir(file_location)
+            yaml_converted = convert_dict(yaml_contents)
+            os.chdir(cwd)
+            result = merge(result, yaml_converted)
+    return result
+
+
 def merge(yaml1, yaml2):
     if not yaml1 and yaml2:
         return yaml2
@@ -302,22 +328,38 @@ def merge(yaml1, yaml2):
         return yaml1
 
     merged_yaml = yaml1
+    merge_elements = False
 
     if isinstance(yaml1,dict) and isinstance(yaml2,dict):
-        for k,v in yaml2.iteritems():
-            if k not in merged_yaml:
-                merged_yaml[k] = v
-            else:
-                merged_yaml[k] = merge(merged_yaml[k],v)
-    if isinstance(yaml1,list) and isinstance(yaml2,list):
-        merged_list = []
-        merged_list.append(yaml1)
-        merged_list.append(yaml2)
-        #for single_elem in yaml2:
-        #    if single_elem not in merged_list:
-        #        merged_list.append(single_elem)
-        merged_yaml = merged_list
-
+        if 'class' in yaml1 and 'class' in yaml2:
+            merge_elements = True
+        else:
+            for k,v in yaml2.iteritems():
+                if k not in merged_yaml:
+                    merged_yaml[k] = v
+                else:
+                    merged_yaml[k] = merge(merged_yaml[k],v)
+    elif isinstance(yaml1,list) and isinstance(yaml2,list):
+        merge_elements = True
+    elif isinstance(yaml1,list) and isinstance(yaml2,dict):
+        merge_elements = True
+    elif isinstance(yaml1,dict) and isinstance(yaml2,list):
+        merge_elements = True
+    if merge_elements:
+        if yaml1 != yaml2:
+            merged_list = []
+            yaml1_list_depth = list_depth(yaml1)
+            yaml2_list_depth = list_depth(yaml2)
+            if yaml1_list_depth == yaml2_list_depth:
+                merged_list.append(yaml1)
+                merged_list.append(yaml2)
+            elif yaml2_list_depth < yaml1_list_depth:
+                merged_list = yaml1
+                merged_list.append(yaml2)
+            elif yaml1_list_depth < yaml2_list_depth:
+                merged_list = yaml2
+                merged_list.append(yaml1)
+            merged_yaml = merged_list
     return merged_yaml
 
 def create_roslin_yaml(output_meta_list, yaml_file_list):
@@ -507,6 +549,13 @@ def check_if_argument_file_exists(argument_value):
         if not os.path.exists(argument_value):
             print_error("ERROR: Could not find " + argument_value)
             sys.exit(1)
+
+def add_record_argument(record,key_list):
+    input_arguments = {}
+    for single_key in key_list:
+        if single_key in record:
+            input_arguments[single_key] = record[single_key]
+    return input_arguments
 
 def copy_worker(copy_command_dict):
     copy_command = copy_command_dict['command']
