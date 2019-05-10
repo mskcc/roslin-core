@@ -24,7 +24,7 @@ import copy
 from subprocess import PIPE, Popen
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs, save_yaml, convert_to_snake_case
+from core_utils import read_pipeline_settings, run_command, print_error, create_roslin_yaml, convert_yaml_abs_path, check_if_env_is_empty, copy_outputs, save_yaml, load_yaml, merge_yaml_list, convert_to_snake_case
 import dill
 import json
 import sys
@@ -637,7 +637,12 @@ class RoslinJob(Job):
         memory = job_params['memory']
         cores = job_params['cores']
         disk = job_params['disk']
+        current_name = job_params['name']
         Job.__init__(self,  memory=memory, cores=int(cores), disk=disk)
+        if 'cwl' in job_params:
+            self.__dict__['jobName'] = 'CWLWorkflow'
+        else:
+            self.__dict__['jobName'] = current_name
         self.compressed_job_function = dill.dumps(job_function)
         self.params = params
         self.job_params = job_params
@@ -660,6 +665,15 @@ class RoslinJob(Job):
             error_message = "Job " + str(job_name) + " failed.\n"+traceback.format_exc()
             log(logger,"error",error_message)
             sys.exit(error_message)
+
+def emptyJob(self,params,job_params):
+    pass
+
+def gather_output_meta(self,params,job_params):
+    output_meta_json = job_params['output_meta_json']
+    meta_list = job_params['meta_list']
+    merged_yaml_data = merged_yaml(meta_list)
+    save_yaml(output_meta_json,merged_yaml_data)
 
 def find_unique_name_in_dir(root_name,directory):
     current_num = 1
@@ -734,7 +748,7 @@ class RoslinWorkflow(object):
         workflow_info = self.params['workflows'][workflow_name]
         return workflow_info
 
-    def modify_dependency_inputs(self,input_yaml_data):
+    def modify_dependency_inputs(self,input_yaml_data, job_params):
         return input_yaml_data
 
     def update_copy_outputs_config(self,new_config):
@@ -915,7 +929,6 @@ class RoslinWorkflow(object):
         job_params['name'] = current_name
         jobs_dict[current_name] = job_params
         roslin_job_obj = RoslinJob(function,params,job_params)
-        roslin_job_obj.__dict__['jobName'] = current_name
         return roslin_job_obj
 
     def get_input_yaml_from_job(self,params,job_params):
@@ -929,7 +942,7 @@ class RoslinWorkflow(object):
         if not yaml_list:
             yaml_list.append(params['input_yaml'])
         roslin_yaml = create_roslin_yaml(output_meta_json_list,yaml_list)
-        roslin_yaml = self.modify_dependency_inputs(roslin_yaml)
+        roslin_yaml = self.modify_dependency_inputs(roslin_yaml,job_params)
         save_yaml(yaml_location,roslin_yaml)
         return 0
 
@@ -1086,6 +1099,13 @@ class SingleCWLWorkflow(RoslinWorkflow):
         self.params['requirement_list'] = input_config
         self.update_copy_outputs_config(output_config)
 
+    def add_sub_workflow(self,workflow_name,workflow_output_folder,cwl_filename):
+        output_config = self.get_outputs(workflow_output_folder)
+        cwl_path = os.path.join(cwl_type,cwl_filename)
+        workflow_info = {'output':workflow_output_folder,'filename':cwl_path,'output_config':output_config}
+        self.params['workflows'][workflow_name] = workflow_info
+        self.update_copy_outputs_config(output_config)
+
     def get_outputs(self,workflow_output_folder):
         workflow_output_path = os.path.join("outputs",workflow_output_folder)
         workflow_log_path = os.path.join(workflow_output_path,"log")
@@ -1102,7 +1122,7 @@ class SingleCWLWorkflow(RoslinWorkflow):
             dependency_snake_case = convert_to_snake_case(dependency)
             dependency_param = '--use_{}_meta'.format(dependency_snake_case)
             dependency_key = '{}_meta'.format(dependency_snake_case)
-            if dependecy in single_dependency_list:
+            if dependency in single_dependency_list:
                 dependency_description = "The path to the {} outputs meta file that you need for this run ( since this is a intermediate workflow )".format(workflow_name.lower())
                 dependency_requirement = ("store",str,dependency_key,dependency_param,dependency_description, True, True)
             else:
@@ -1111,6 +1131,15 @@ class SingleCWLWorkflow(RoslinWorkflow):
             requirement_list.append(dependency_requirement)
             dependency_key_list.append(dependency_key)
         return (requirement_list, dependency_key_list)
+
+    def add_sample_or_pair_argument(sample_or_pair):
+        if sample_or_pair == 'sample':
+            return ("store",str,"sample_number","--sample-num","The sample to process in a given pair", False, False)
+        else:
+            return ("store",str,"pair_number","--pair-num","The pair to process in a given list of pairs", False, False)
+
+    def add_batch_argument():
+        return ("store_true",bool,"batch_mode","--batch","Run workflow in batch mode",False,False)
 
     def run_pipeline(self,job_params=None,run_analysis=False):
         workflow_params = self.params
@@ -1130,13 +1159,15 @@ class SingleCWLWorkflow(RoslinWorkflow):
                 else:
                     single_dependency_info = {'output_meta_json':meta_json,'input_yaml':input_yaml}
                     dependency_list.append(single_dependency_info)
-        roslin_job_obj, job_params = self.get_job(dependency_list,job_params=job_params)
+        else:
+            roslin_job_obj, job_params = self.get_job(dependency_list,job_params=job_params)
         roslin_job_obj = self.copy_workflow_outputs(roslin_job_obj)
         if run_analysis:
             roslin_job_obj = self.roslin_analysis(roslin_job_obj)
         return roslin_job_obj
 
     def get_job(self,dependency_param_list,job_params=None):
+        workflow_params = self.params
         if not job_params:
             job_params = self.set_default_job_params()
         workflow_info = self.get_workflow_info()
@@ -1151,9 +1182,143 @@ class SingleCWLWorkflow(RoslinWorkflow):
         job_params['parent_output_meta_json_list'] = parent_output_meta_json_list
         job_params['parent_input_yaml_list'] = parent_input_yaml_list
         job_params['cwl'] = workflow_info['filename']
-        roslin_job_obj = self.create_job(self.run_cwl,self.params,job_params,workflow_output)
+        scatter_pairs = False
+        if workflow_params['batch_mode'] == True:
+            scatter_pairs = False
+            scatter_samples = False
+            requirements = workflow_params['requirements']
+            if 'pair_number' in requirements:
+                job_params['pair_number'] = requirements['pair_number']
+                if requirements['pair_number'] is None:
+                    scatter_pairs = True
+                    scatter_samples = False
+                    if 'sample_number' in requirements:
+                        job_params['sample_number'] = requirements['sample_number']
+                        if requirements['sample_number'] is None:
+                            scatter_samples = True
+                            scatter_pairs = True
+                        else:
+                            scatter_pairs = False
+                            scatter_samples = False
+        if scatter_pairs:
+            default_job_params = self.set_default_job_params()
+            default_job_params['memory'] = '1G'
+            gather_job_params = copy.deepcopy(default_job_params)
+            roslin_job_obj = self.create_job(emptyJob,self.params,default_job_params,"CWLScatter")
+            input_yaml = workflow_params['input_yaml']
+            yaml_data = load_yaml(input_yaml)
+            pairs = []
+            meta_list = []
+            if 'pair' in yaml_data:
+                pairs = yaml_data['pair']
+            if 'pairs' in yaml_data:
+                pairs = yaml_data['pairs']
+            for single_pair_index, single_pair in enumerate(pairs):
+                if scatter_samples:
+                    for single_sample_index, single_sample in enumerate(single_pair):
+                        scatter_workflow_output = workflow_output + 'pair' + str(single_pair_index) + 'sample' + str(single_sample_index)
+                        new_job_params = copy.deepcopy(job_params)
+                        new_job_params['pair_number'] = single_pair_index
+                        new_job_params['sample_number'] = single_sample_index
+                        self.add_sub_workflow(self,scatter_workflow_output,scatter_workflow_output,workflow_info['filename']):
+                        scatter_job_obj, scatter_job_params = self.create_job(self.run_cwl,self.params,new_job_params,scatter_workflow_output)
+                        roslin_job_obj.addChild(scatter_job_obj)
+                        meta_list.append(scatter_job_params['output_meta_json'])
+                else:
+                    scatter_workflow_output = workflow_output + 'pair' + str(single_pair_index)
+                    new_job_params = copy.deepcopy(job_params)
+                    new_job_params['pair_number'] = single_pair_index
+                    self.add_sub_workflow(self,scatter_workflow_output,scatter_workflow_output,workflow_info['filename']):
+                    scatter_job_obj, scatter_job_params = self.create_job(self.run_cwl,self.params,new_job_params,scatter_workflow_output)
+                    roslin_job_obj.addChild(scatter_job_obj)
+                    meta_list.append(scatter_job_params['output_meta_json'])
+            gather_job_params['output_meta_json'] = job_params['output_meta_json']
+            gather_job_params['meta_list'] = meta_list
+            gather_job_obj, gather_job_params = self.create_job(gather_output_meta,self.params,default_job_params,"CWLGather")
+            roslin_job_obj.addFollowOn(gather_job_obj)
+        else:
+            roslin_job_obj = self.create_job(self.run_cwl,self.params,job_params,workflow_output)
         return (roslin_job_obj, job_params)
 
+    def input_sample_or_pair(self,key_list,roslin_yaml,job_params):
+        params = self.params
+        logger = dill.loads(params['logger'])
+        dependency_input = None
+        dependency_key_list = []
+        error_description = ""
+        duplicate_description = ""
+        valid_keys = []
+        key_name = None
+        sample_number = None
+        pair_number = None
+        sample_or_pair = 'pair'
+        if 'sample_number' in job_params:
+            sample_or_pair = 'sample'
+            if job_params['sample_number'] is not None:
+                sample_number = job_params['sample_number']
+        if 'pair_number' in job_params:
+            if job_params['pair_number'] is not None:
+                pair_number = job_params['pair_number']
+        for input_key_num, input_key in enumerate(key_list):
+            new_dependency_input = None
+            if input_key:
+                valid_keys.append(input_key)
+            if input_key in roslin_yaml:
+                if input_key_num == 0:
+                    if isinstance(roslin_yaml[input_key], list):
+                        error_description = error_description+ "Tried " + input_key + ", but input cannot be of type list\n"
+                    else:
+                        key_name = input_key
+                        new_dependency_input = roslin_yaml[input_key]
+                if input_key_num == 1:
+                    if isinstance(roslin_yaml[input_key], list):
+                        if sample_or_pair == 'pair':
+                            if any(isinstance(single_elem, list) for single_elem in roslin_yaml[input_key]):
+                                error_description = error_description + "Tried " + input_key + ", but input must be of type list, got type list of lists\n"
+                            else:
+                                key_name = input_key
+                                new_dependency_input = roslin_yaml[input_key]
+                        else:
+                            if sample_number != None:
+                                key_name = input_key
+                                new_dependency_input = roslin_yaml[input_key][sample_number]
+                            else:
+                                error_description = error_description + "Tried " + input_key + ", but --sample-num is not specified\n"
+                    else:
+                        error_description = error_description+ "Tried " + input_key + ", but input must be of type list, got "+ type(roslin_yaml[input_key]).__name__ +" instead\n"
+                if input_key_num == 2:
+                    if isinstance(roslin_yaml[input_key], list):
+                        if any(isinstance(single_elem, list) for single_elem in roslin_yaml[input_key]):
+                            if pair_number != None:
+                                if sample_or_pair == 'pair':
+                                    key_name = input_key
+                                    new_dependency_input = roslin_yaml[input_key][pair_number]
+                                else:
+                                    if sample_number != None:
+                                        key_name = input_key
+                                        new_dependency_input = roslin_yaml[input_key][pair_number][sample_number]
+                                    else:
+                                        error_description = error_description + "Tried " + input_key + ", but --sample-num is not specified\n"
+                            else:
+                                error_description = error_description + "Tried " + input_key + ", but --pair-num is not specified\n"
+                        else:
+                            error_description = error_description+ "Tried " + input_key + ", but input must be of type list of lists, got type list instead\n"
+                    else:
+                        error_description = error_description+ "Tried " + input_key + ", but input must be of type list of lists, got "+ type(roslin_yaml[input_key]).__name__ +" instead\n"
+            if new_dependency_input:
+                dependency_input = new_dependency_input
+                dependency_key_list.append(input_key)
+
+        if len(dependency_key_list) > 1:
+            error_description = "Multiple valid inputs from keys: " +",".join(dependency_key_list)
+        if len(dependency_key_list) == 0:
+            error_description = "Could not find inputs from valid keys: " + ",".join(valid_keys) + "\n" + error_description
+
+        if error_description and len(dependency_key_list) != 1:
+            log(logger,"error",error_description)
+            sys.exit(1)
+        else:
+            return dependency_input
 
 class ReadOnlyFileJobStore(FileJobStore):
 
