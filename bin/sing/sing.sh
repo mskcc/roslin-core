@@ -54,10 +54,11 @@ then
       docker tag ${docker_image_registry} ${tool_info}
   fi
 
-docker run -i -w $(pwd) $(echo $DOCKER_BIND) ${tool_info} "$1" ${@:2}
+docker run -i -w $(pwd) $(echo $DOCKER_BIND) ${tool_info} $@
 else
 # start a singularity container with an empty environment
-${ROSLIN_SINGULARITY_PATH} run \
+# use /usr/bin/runscript.sh
+${ROSLIN_SINGULARITY_PATH} exec \
   --cleanenv \
-  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif "$1" ${@:2}
+  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif /usr/bin/runscript.sh $@
 fi
