@@ -25,7 +25,7 @@ sys.path.append(ROSLIN_CORE_BIN_PATH)
 from core_utils import load_pipeline_settings, copy_ignore_same_file, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists, check_yaml_boolean_value, load_yaml, save_yaml, check_tmp_env
 
 GB_SIZE_MB = 1024
-MB_SIZE_B = (float(1024) ** 2)
+MB_SIZE_B = (float(GB_SIZE_MB) ** 2)
 MAX_META_FILE_SIZE = 5 * MB_SIZE_B
 JOBSTORE_UUID_FILE_NAME = 'jobstore_uuid'
 INPUT_YAML_FILE_NAME = 'inputs.yaml'
