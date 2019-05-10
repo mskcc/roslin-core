@@ -373,7 +373,7 @@ if __name__ == "__main__":
         help="Dockerhub registry to pull ( invoked only with --use-docker)",
         required=False
     )
-    options, _ = parser.parse_known_args()
+    options, other_options = parser.parse_known_args()
     check_if_argument_file_exists(options.on_start)
     check_if_argument_file_exists(options.on_complete)
     check_if_argument_file_exists(options.on_fail)
@@ -402,16 +402,35 @@ if __name__ == "__main__":
             workflow_param_key = parser_dest
             workflow_param_value = workflow_params.__dict__[workflow_param_key]
             if is_path:
-                if not os.path.exists(workflow_param_value):
-                    print_error("ERROR: Could not fine "+ str(workflow_param_value))
-                    sys.exit(1)
-            requirements_dict[workflow_param_key] = workflow_param_value
+                requirements_value = None
+                if isinstance(workflow_param_value, list):
+                    requirements_value = []
+                    for single_param in workflow_param_value:
+                        if not os.path.exists(single_param):
+                            print_error("ERROR: Could not find "+ str(single_param))
+                            sys.exit(1)
+                        single_param_value = os.path.abspath(single_param)
+                        requirements_value.append(single_param_value)
+                else:
+                    if not os.path.exists(workflow_param_value):
+                        print_error("ERROR: Could not find "+ str(workflow_param_value))
+                        sys.exit(1)
+                    requirements_value = os.path.abspath(workflow_param_value)
+            else:
+                requirements_value = workflow_param_value
+            requirements_dict[workflow_param_key] = requirements_value
         options = workflow_params
     job_store = options.jobStore
     if options.debug_mode:
         logger.setLevel(logging.DEBUG)
         add_stream_handler(logger,None,logging.DEBUG)
         add_stream_handler(logger_file_monitor,"%(message)s",logging.DEBUG)
+        log(logger,"debug","Options:\n")
+        log(logger,"debug",options)
+        log(logger,"debug","Extra options:\n")
+        log(logger,"debug",other_options)
+        log(logger,"debug","Workflow specifc options:\n")
+        log(logger,"debug",requirements_dict)
     else:
         logger.setLevel(logging.INFO)
         add_stream_handler(logger,None,logging.INFO)

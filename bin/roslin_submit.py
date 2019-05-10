@@ -171,7 +171,12 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
             roslin_leader_command.extend(['--docker-registry',docker_registry])
     for single_requirement_key in requirements_dict:
         requirement_value, requirement_option = requirements_dict[single_requirement_key]
-        roslin_leader_command.extend([requirement_option,requirement_value])
+        if requirement_value != None:
+            if isinstance(requirement_value, list):
+                for single_requirement_value in requirement_value:
+                    roslin_leader_command.extend([requirement_option,single_requirement_value])
+            else:
+                roslin_leader_command.extend([requirement_option,requirement_value])
     if restart:
         roslin_leader_command.append('--restart')
         user_event_name = "restart"
@@ -224,13 +229,22 @@ def submit(project_id, job_uuid, project_path, pipeline_name, pipeline_version, 
         running_command_str = running_command_str + "\nResults: {}".format(workflow_results_path)
     with open(submission_log_path,"w") as submission_file:
         json.dump(submission_dict,submission_file)
+    if debug_mode:
+        print("Leader command:")
+        print(roslin_leader_command)
     if foreground_mode:
         clean_up_tuple = (project_id, job_uuid, pipeline_name, pipeline_version, True)
         signal.signal(signal.SIGINT, partial(cleanup, clean_up_tuple))
         signal.signal(signal.SIGTERM, partial(cleanup, clean_up_tuple))
+        if debug_mode:
+            print("Project info:")
         print(running_command_str)
         command_output = run_command_realtime(roslin_leader_command, False)
         exit_code = command_output['errorcode']
+        output = command_output['output']
+        error = command_output['error']
+        if error != None:
+            print_error(error)
         exit(exit_code)
     else:
         leader_process = run_command(roslin_leader_command,log_path_stdout,log_path_stderr,False,False)
@@ -575,11 +589,23 @@ def main():
             workflow_param_key = parser_dest
             workflow_param_value = workflow_params[workflow_param_key]
             if is_path:
-                if not os.path.exists(workflow_param_value):
-                    print_error("ERROR: Could not find "+ str(workflow_param_value))
-                    sys.exit(1)
-                workflow_param_value = os.path.abspath(workflow_param_value)
-            requirements_dict[workflow_param_key] = (workflow_param_value, parser_option)
+                requirements_value = None
+                if isinstance(workflow_param_value, list):
+                    requirements_value = []
+                    for single_param in workflow_param_value:
+                        if not os.path.exists(single_param):
+                            print_error("ERROR: Could not find "+ str(single_param))
+                            sys.exit(1)
+                        single_param_value = os.path.abspath(single_param)
+                        requirements_value.append(single_param_value)
+                else:
+                    if not os.path.exists(workflow_param_value):
+                        print_error("ERROR: Could not find "+ str(workflow_param_value))
+                        sys.exit(1)
+                    requirements_value = os.path.abspath(workflow_param_value)
+            else:
+                requirements_value = workflow_param_value
+            requirements_dict[workflow_param_key] = (requirements_value, parser_option)
 
     if params.force_overwrite_results and not params.results_dir:
         print_error("ERROR: You need to specify an output directory to force overwrite")
