@@ -63,6 +63,3 @@ fi
 
 # create user directory
 mkdir -p ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id}
-
-# copy jumpstart examples
-tar xzf ${ROSLIN_PIPELINE_WORKSPACE_PATH}/examples.tgz -C ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id} --strip-components 1
