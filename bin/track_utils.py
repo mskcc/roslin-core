@@ -613,9 +613,11 @@ def construct_job_doc(single_tool_status,job_name,job_id,status):
     job_doc = {
         "name": job_name,
         "status": status,
-        "memory": worker_obj['memory'],
+        "memory_requested": worker_obj['memory'],
+        "memory": worker_obj['job_memory'],
+        "cpu": worker_obj['job_cpu'],
         "disk": worker_obj['disk'],
-        "cores": worker_obj['cores'],
+        "cores_requested": worker_obj['cores'],
         "jobInfo": job_info,
         "logFile": None,
         "timestamp": {
@@ -856,15 +858,17 @@ class RoslinWorkflow(object):
         max_mem_str = self.params['max_mem']
         max_cpu_str = self.params['max_cpu']
         batch_system = self.params['batch_system']
-        max_mem = int(max_mem_str[:-1]) * 1024
-        max_cpu = int(max_cpu_str)
         mem_str = '8G'
         cpu_str = 1
         mem_in_mb = int(mem_str[:-1]) * 1024
-        if max_mem < mem_in_mb:
-            mem_str = max_mem_str
-        if max_cpu < cpu_str:
-            cpu_str = max_cpu
+        if max_mem_str:
+            max_mem = int(max_mem_str[:-1]) * 1024
+            if max_mem < mem_in_mb:
+                mem_str = max_mem_str
+        if max_cpu_str:
+            max_cpu = int(max_cpu_str)
+            if max_cpu < cpu_str:
+                cpu_str = max_cpu
         job_params = {}
         job_params['input_yaml'] = self.params['input_yaml']
         job_params['batch_system'] = batch_system
@@ -964,8 +968,8 @@ class RoslinWorkflow(object):
         job_restart = job_params['restart']
         job_name = job_params['name']
         log_folder = params['log_folder']
-        max_mem = str(job_params['max_mem'])
-        max_cpu = str(job_params['max_cores'])
+        max_mem = job_params['max_mem']
+        max_cpu = job_params['max_cores']
         job_store_name = job_jobstore
         job_store_path = os.path.join(job_tmp_dir,job_store_name)
         job_suffix = ''
@@ -992,10 +996,12 @@ class RoslinWorkflow(object):
         "-b",batch_system,
         "-j",job_jobstore,
         "-k",job_work_dir,
-        "-m",max_mem,
-        "-c",max_cpu,
         "-u",job_uuid,
         "-o",job_output_dir]
+        if max_mem:
+            roslin_runner_command.extend(["-m",str(max_mem)])
+        if max_cpu:
+            roslin_runner_command.extend(["-c",str(max_cpu)])
         if job_restart:
             roslin_runner_command.extend(["-r"])
         if debug_mode:
