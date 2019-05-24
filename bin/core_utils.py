@@ -375,6 +375,122 @@ def save_yaml(yaml_path,yaml_data):
     create_path(yaml_path)
     with open(yaml_path, 'w') as yaml_file:
         yaml.dump(yaml_data, yaml_file)
+
+def read_from_disk(filename):
+    "return file contents"
+
+    with open(filename, 'r') as file_in:
+        return file_in.read()
+
+def write_to_disk(filename, content):
+    "write to file"
+
+    with open(filename, 'w') as file_out:
+        file_out.write(content)
+
+def get_template(filename):
+    "read template from file and return jinja template object"
+
+    with open(filename) as template_file:
+        return Template(template_file.read())
+
+def get_workflow_config(workflow):
+    import roslin_workflows
+    roslin_workflow_class = getattr(roslin_workflows,workflow)
+    roslin_workflow = roslin_workflow_class(None)
+    return roslin_workflow.__dict__
+
+def get_workflow_test_args(workflow,dependency_path,sample_num,pair_num):
+    workflow_args = ''
+    workflow_config = get_workflow_config(workflow)
+    input_config = workflow_config['params']['workflows'][workflow]['input_config']
+    workflow_dependency_list = workflow_config['params']['workflows'][workflow]['dependency_key_list']
+    dependency_file_list = []
+    if input_config:
+        for single_input in input_config:
+            input_key = single_input[2]
+            input_arg = single_input[3]
+            if input_key == 'sample_number':
+                workflow_args = workflow_args + ' \\\n    ' + input_arg + ' ' + str(sample_num)
+            elif input_key == 'pair_number':
+                workflow_args = workflow_args + ' \\\n    ' + input_arg + ' ' + str(pair_num)
+            elif 'meta' in input_key:
+                meta_file_list = []
+                meta_workflow_name = convert_to_upper_camel_case(input_key.replace('_meta',''))
+                if meta_workflow_name[-2:] == 'Sv':
+                    meta_workflow_name = meta_workflow_name.replace('Sv','SV')
+                meta_workflow_dependency_list = get_workflow_config(meta_workflow_name)['params']['workflows'][meta_workflow_name]['dependency_key_list']
+                meta_file_name = meta_workflow_name
+                meta_pair_files = []
+                if 'pair_number' in meta_workflow_dependency_list:
+                    if 'pair_number' in workflow_dependency_list:
+                        meta_pair_file_name = meta_file_name + 'Pair'+str(pair_num)
+                        meta_pair_files.append(meta_pair_file_name)
+                    else:
+                        for single_pair_num in range(2):
+                            meta_pair_file_name = meta_file_name + 'Pair'+str(single_pair_num)
+                            meta_pair_files.append(meta_pair_file_name)
+                else:
+                    meta_pair_files.append(meta_file_name)
+                for single_meta_pair in meta_pair_files:
+                    if 'sample_number' in meta_workflow_dependency_list:
+                        if 'sample_number' in workflow_dependency_list:
+                            meta_sample_file_name = single_meta_pair + 'Sample'+str(sample_num)
+                            meta_file_list.append(meta_sample_file_name)
+                        else:
+                            for single_sample_num in range(2):
+                                meta_sample_file_name = single_meta_pair + 'Sample'+str(single_sample_num)
+                                meta_file_list.append(meta_sample_file_name)
+                    else:
+                        meta_file_list.append(single_meta_pair)
+                for single_meta_file in meta_file_list:
+                    meta_file_path = os.path.join(dependency_path,'meta',single_meta_file)
+                    workflow_args = workflow_args + ' \\\n    ' + input_arg + ' ' + meta_file_path
+                dependency_file_list.extend(meta_file_list)
+    return (workflow_args, dependency_file_list)
+
+def create_mpgr(pipeline_name,pipeline_version,workflow,batch_system,mpgr_output_path,dependency_path=None,sample_num=0,pair_num=0,results=None,cwl_batch_system=None,run_args=None):
+    pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
+    sys.path.append(pipeline_settings['ROSLIN_PIPELINE_BIN_PATH'])
+    dependency_file_list = []
+    if not dependency_path:
+        dependency_path = os.path.join(pipeline_settings['ROSLIN_PIPELINE_WORKSPACE_PATH'],'test_data')
+    test_data = os.path.join(dependency_path,'examples','data')
+    test_template_path = os.path.join(dependency_path,'examples','Proj_ROSLIN_DEV')
+    list_of_templates = ['Proj_ROSLIN_DEV_request.template.txt','Proj_ROSLIN_DEV_sample_data_clinical.template.txt','Proj_ROSLIN_DEV_sample_grouping.template.txt','Proj_ROSLIN_DEV_sample_mapping.template.txt','Proj_ROSLIN_DEV_sample_pairing.template.txt','run-example.template.sh']
+    for single_template in list_of_templates:
+        single_template_path = os.path.join(test_template_path,single_template)
+        output_template_name = single_template.replace('.template','')
+        template_output_path = os.path.join(mpgr_output_path,output_template_name)
+        if single_template == 'Proj_ROSLIN_DEV_sample_mapping.template.txt':
+            template = get_template(single_template_path)
+            template_data = template.render( test_data=test_data)
+            write_to_disk(template_output_path, template_data)
+        elif single_template == 'run-example.template.sh':
+            if not results:
+                results = pipeline_settings['ROSLIN_PIPELINE_OUTPUT_PATH']
+            if not cwl_batch_system:
+                cwl_batch_system = batch_system
+            if not run_args:
+                run_args = ''
+            template = get_template(single_template_path)
+            workflow_args, dependency_file_list = get_workflow_test_args(workflow,dependency_path,sample_num,pair_num)
+            run_args = run_args + workflow_args
+            template_data = template.render(
+                pipeline_name=pipeline_name,
+                pipeline_version=pipeline_version,
+                test_workflow=workflow,
+                test_results=results,
+                test_batchsystem=batch_system,
+                test_cwl_batchsystem=cwl_batch_system,
+                test_run_args=run_args)
+            write_to_disk(template_output_path,template_data)
+            os.chmod(template_output_path,0777)
+        else:
+            copy_ignore_same_file(single_template_path,template_output_path)
+    return dependency_file_list
+
+
 def check_yaml_boolean_value(yaml_value):
     yaml_true_value = ["y","Y","yes","Yes","YES","true","True","TRUE","on","On","ON"]
     yaml_false_value = ["n","N","no","No","NO","false","False","FALSE","off","Off","OFF"]
