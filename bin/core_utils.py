@@ -347,7 +347,13 @@ def check_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_v
     else:
         return None
 
+def create_path(file_path):
+    directory_path = os.path.dirname(file_path)
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
 def save_json(json_path,json_data):
+    create_path(json_path)
     with open(json_path,'w') as json_file:
         json.dump(json_data,json_file)
 
@@ -364,6 +370,11 @@ def load_yaml(yaml_path):
         yaml_data = yaml.load(yaml_file)
     return yaml_data
 
+def save_yaml(yaml_path,yaml_data):
+    import yaml
+    create_path(yaml_path)
+    with open(yaml_path, 'w') as yaml_file:
+        yaml.dump(yaml_data, yaml_file)
 def check_yaml_boolean_value(yaml_value):
     yaml_true_value = ["y","Y","yes","Yes","YES","true","True","TRUE","on","On","ON"]
     yaml_false_value = ["n","N","no","No","NO","false","False","FALSE","off","Off","OFF"]
