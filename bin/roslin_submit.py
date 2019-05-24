@@ -294,12 +294,19 @@ def targzip_project_files(project_id, project_path):
     input_files['files'] = input_file_objs
     return input_files
 
-def mem_format_type(value):
-    if not re.match(r"\d+[gG]",value):
-        print_error(str(value) + " is not in a valid format for --max-mem (e.g. 8G)")
-        exit(1)
-    return value
-
+def get_input_metadata(project_path):
+    input_metadata_filenames = []
+    input_metadata_file_paths = []
+    input_metadata_file_paths.append(os.path.join(project_path,"*_request.txt"))
+    input_metadata_file_paths.append(os.path.join(project_path,"*_grouping.txt"))
+    input_metadata_file_paths.append(os.path.join(project_path,"*_mapping.txt"))
+    input_metadata_file_paths.append(os.path.join(project_path,"*_pairing.txt"))
+    input_metadata_file_paths.append(os.path.join(project_path,"*_clinical.txt"))
+    for single_file_path in input_metadata_file_paths:
+        meta_data_file_list = glob.glob(single_file_path)
+        for single_file in meta_data_file_list:
+            input_metadata_filenames.append(os.path.basename(single_file))
+    return input_metadata_filenames
 
 def get_pipeline_name_and_versions():
     pipelines = {}
@@ -402,15 +409,9 @@ def main():
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
 
-    if params.project_path:
-        project_path = os.path.abspath(params.project_path)
-        input_metadata_filenames = [
-            "{}_request.txt".format(project_id),
-            "{}_sample_grouping.txt".format(project_id),
-            "{}_sample_mapping.txt".format(project_id),
-            "{}_sample_pairing.txt".format(project_id),
-            "{}_sample_data_clinical.txt".format(project_id)
-        ]
+    if requirements_dict['project_path']:
+        project_path = os.path.abspath(requirements_dict['project_path'])
+        input_metadata_filenames = get_input_metadata(project_path)
         for filename in input_metadata_filenames:
             input_metadata_location = os.path.join(project_path,filename)
             input_metadata_work_dir_location = os.path.join(work_dir,filename)
