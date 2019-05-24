@@ -235,10 +235,9 @@ if __name__ == "__main__":
     inputs_yaml = options.inputs_yaml
     input_yaml_data = None
     if os.path.exists(inputs_yaml):
-        with open(inputs_yaml) as input_yaml_file:
-            input_yaml_data = safe_load(input_yaml_file)
-            num_pairs = len(input_yaml_data['pairs'])
-            num_groups = len(input_yaml_data['groups'])
+        input_yaml_data = load_yaml(inputs_yaml)
+        num_pairs = len(input_yaml_data['pairs'])
+        num_groups = len(input_yaml_data['groups'])
     process_pid = str(os.getpid())
     work_dir = os.path.abspath(os.path.join(options.project_output,os.pardir))
     pid_file_path = os.path.join(work_dir,'pid')
