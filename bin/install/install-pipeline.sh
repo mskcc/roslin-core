@@ -181,7 +181,7 @@ done
 #<--
 
 # copy jumpstart examples
-tar cvzf ${ROSLIN_PIPELINE_WORKSPACE_PATH}/examples.tgz -C ${install_temp_path}/setup ./examples
+roslin_create_test_files.py --name ${ROSLIN_PIPELINE_NAME} --version ${ROSLIN_PIPELINE_VERSION}
 
 # clean up
 rm -rf ${install_temp_path}
