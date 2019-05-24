@@ -223,6 +223,7 @@ cwltoil \
     --disableCaching \
     --disableChaining \
     --realTimeLogging \
+    --stats \
     --maxLogFileSize 0 \
     --writeLogs ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
