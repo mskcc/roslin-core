@@ -1340,6 +1340,7 @@ class ReadOnlyFileJobStore(FileJobStore):
         self.default_retry_count = 1
         self.retry_jobs = []
         self.job_cache = {}
+        self.stats_cache = {}
         self.job_store_path = path
         self.logger = None
 
@@ -1392,6 +1393,17 @@ class ReadOnlyFileJobStore(FileJobStore):
 
     def updateFile(self, jobStoreFileID, localFilePath):
         pass
+
+    def getStatsFiles(self):
+        stats_file_list = []
+        for tempDir in self._tempDirectories():
+            for tempFile in os.listdir(tempDir):
+                if tempFile.startswith('stats'):
+                    stats_file_path = os.path.join(tempDir, tempFile)
+                    if stats_file_path not in self.stats_cache:
+                        stats_file_list.append(stats_file_path)
+                        self.stats_cache[stats_file_path] = None
+        return stats_file_list
 
     def delete(self,job_store_id):
         del self.job_cache[job_store_id]
@@ -1518,6 +1530,29 @@ class RoslinTrack():
                         tool_dict['exit'][job_id] = current_time
                         if job_id in tool_dict['done']:
                             del tool_dict['done'][job_id]
+    def check_stats(self):
+        jobs_path = self.jobs_path
+        job_dict = self.jobs
+        logger = self.logger
+        stats_file_list = self.job_store_obj.getStatsFiles()
+        for single_stats_path in stats_file_list:
+            if os.path.exists(single_stats_path):
+                with open(single_stats_path, 'rb') as single_file:
+                    single_stats_data = json.load(single_file)
+                    if 'jobs' in single_stats_data:
+                        for single_job_index, single_job in enumerate(single_stats_data['jobs']):
+                            single_job_worker_log = single_stats_data['workers']['logsToMaster'][single_job_index]['text']
+                            single_job_stream_path = single_job_worker_log.split(" ")[1]
+                            if single_job_stream_path in jobs_path:
+                                tool_key = jobs_path[single_job_stream_path]
+                                if tool_key in job_dict:
+                                    tool_dict = job_dict[tool_key]
+                                    for single_job_key in tool_dict['workers']:
+                                        single_worker_obj = tool_dict['workers'][single_job_key]
+                                        if single_worker_obj["job_stream"]:
+                                            if single_worker_obj["job_stream"].split("/")[2] == single_job_stream_path.split("/")[2]:
+                                                single_worker_obj["job_memory"] = single_job['memory']
+                                                single_worker_obj["job_cpu"] = single_job['clock']
 
     def check_jobs(self,track_job_flag):
         logger = self.logger
@@ -1616,7 +1651,7 @@ class RoslinTrack():
                         single_job_info_to_update = {'job_key':job_key,'job_id':job_id}
                         job_info_to_update[job_stream] = single_job_info_to_update
                 current_jobs.append(job_id)
-                worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream,"job_info":job_info}
+                worker_obj = {"disk":job_disk,"memory":job_memory,"cores":job_cores,"job_stream":job_stream,"job_info":job_info,'job_memory':None,'job_cpu':None}
                 if job_key not in job_dict:
                     job_dict[job_key] = {'submitted':{},'workers':{},'done':{},'exit':{}}
                 tool_dict = job_dict[job_key]
@@ -1745,15 +1780,17 @@ class RoslinTrack():
         job_dict = self.jobs
         current_jobs = self.current_jobs
         current_time = get_current_time()
+        finished_jobs = False
         for single_tool_name in job_dict:
             single_tool = job_dict[single_tool_name]
             submitted_dict = single_tool['submitted']
             for single_job in submitted_dict:
                 if single_job not in single_tool['done']:
                     if single_job not in current_jobs:
+                        finished_jobs = True
+                        self.check_stats()
                         if single_job not in single_tool['exit']:
                             single_tool['done'][single_job] = current_time
-
     def get_pending_and_running_jobs(self,submitted_dict,done_dict,exit_dict,workers_dict):
         logger = self.logger
         pending_dict = {}
@@ -1810,6 +1847,7 @@ class RoslinTrack():
         if not track_job_flag.is_set():
             return
         self.check_for_running()
+        self.check_stats()
         self.check_for_finished_jobs()
         new_job_status = self.prepare_job_status()
         status_change = self.get_change_status(job_status,new_job_status)
