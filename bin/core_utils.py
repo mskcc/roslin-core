@@ -1,9 +1,10 @@
 from __future__ import print_function
 from builtins import super
 from subprocess import PIPE, Popen, STDOUT
-import os, sys
+import os, sys, argparse
 from multiprocessing.dummy import Pool
 from queue import Queue
+from jinja2 import Template
 import time
 import shutil
 import filecmp
@@ -16,6 +17,8 @@ import glob
 import getpass
 import traceback
 import re
+import inspect
+import stat
 
 starting_log_message="------------ starting ------------"
 exiting_log_message="------------ exiting ------------"
@@ -58,6 +61,136 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
         error = traceback.format_exc()
         return {"output":None,"error":error,"errorcode":1}
 
+def mem_format_type(value):
+    if not re.match(r"\d+[gG]",value):
+        print_error(str(value) + " is not in a valid format for --max-mem (e.g. 8G)")
+        exit(1)
+    return value
+
+def get_choices():
+    sys.path.append(os.environ['ROSLIN_PIPELINE_BIN_PATH'])
+    import roslin_workflows
+    from track_utils import  RoslinWorkflow
+    from toil.batchSystems import registry
+    roslin_workflow_list_unfiltered = inspect.getmembers(roslin_workflows, inspect.isclass)
+    roslin_workflow_list = []
+    workflow_ignore_list = ['SingleCWLWorkflow','HelloWorld']
+    for single_class in roslin_workflow_list_unfiltered:
+        class_name = single_class[0]
+        class_obj = single_class[1]
+        if class_name in workflow_ignore_list:
+            continue
+        if class_obj == RoslinWorkflow:
+            continue
+        if issubclass(class_obj,RoslinWorkflow):
+            roslin_workflow_list.append(class_name)
+    return {'workflow_name':list(roslin_workflow_list),'batch_system':list(registry._UNIQUE_NAME),'cwl_batch_system':list(registry._UNIQUE_NAME)}
+
+def add_workflow_requirement(parser,requirements_list):
+    choices_dict = get_choices()
+    for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
+        if parser_type == bool:
+            parser.add_argument(parser_option,action=parser_action, dest=parser_dest, help=parser_help, required=parser_required)
+        else:
+            if parser_dest in choices_dict:
+                parser.add_argument(parser_option, type=parser_type, action=parser_action, dest=parser_dest, choices=choices_dict[parser_dest], help=parser_help, required=parser_required)
+            else:
+                parser.add_argument(parser_option, type=parser_type, action=parser_action, dest=parser_dest, help=parser_help, required=parser_required)
+    return parser
+
+def get_args_dict(requirements_list):
+    requirements_dict = {}
+    for single_requirement in requirements_list:
+        requirements_dict[single_requirement[2]] = single_requirement[3]
+    return requirements_dict
+
+def get_restart_args():
+    requirements_list = [
+        ("store",str,"restart_job_uuid","--restart","project uuid for restart",True,False)
+    ]
+    restart_args = get_common_args()
+    restart_args.extend(get_submission_args())
+    for single_arg in restart_args:
+        if single_arg[2] != "inputs_yaml" and single_arg[2] != "workflow_name":
+            new_arg_list = list(single_arg)
+            new_arg_list[5] = False
+            new_arg = tuple(new_arg_list)
+            requirements_list.append(new_arg)
+    return requirements_list
+
+
+def get_leader_args():
+    requirements_list = [
+        ("store",str,"jobstore_uuid","--jobstore-id","The uuid of the jobstore",True,False),
+        ("store",str,"project_uuid","--uuid","The uuid of the project",True,False),
+        ("store",str,"project_output","--project-output","Path to Project output",True,True),
+        ("store",str,"log_folder","--log-folder","Path to folder to store the logs",True,True),
+        ("store",str,"project_workdir","--project-workdir","Path to Project workdir",True,True),
+        ("store",str,"project_results","--project-results","Path to the output directory to store results",False,True),
+        ("store",str,"project_tmpdir","--project-tmpDir","Path to Project tmpdir",True,True),
+        ("store",str,"pipeline_name","--pipeline-name","Pipeline name (e.g. variant)",True,False),
+        ("store",str,"pipeline_version","--pipeline-version","Pipeline version (e.g. 2.5.0)",True,False),
+        ("store",str,"run_attempt","--run-attempt","Number of times the run has been ateempted, used to id the run when restarting the job",True,False),
+        ("store",str,"retry_count","--retry-count","Number of times the piepline can retry failed jobs",True,False)
+    ]
+    return requirements_list
+
+def get_submission_args():
+    requirements_list = [
+        ("store_true",bool,"foreground_mode","--foreground-mode","Runs the pipeline the the foreground",False,False),
+        ("store",str,"results_dir","--results","Path to the directory to store results",False,True),
+        ("store",str,"max_mem","--max-mem","The maximum amount of memory to request in GB (e.g. 8G)",False,False),
+        ("store",str,"max_cpu","--max-cpu","The maximum amount of cpu to request",False,False)
+    ]
+    return requirements_list
+
+def get_common_args():
+    requirements_list = [
+        ("store",str,"project_id","--id","Project ID (e.g. Proj_5088_B)",True,False),
+        ("store",str,"inputs_yaml","--inputs","The path to your input yaml file ( required on non-restart runs )",True,True),
+        ("store",str,"workflow_name","--workflow","Workflow name ( required on non-restart runs )",True,False),
+        ("store",str,"batch_system","--batch-system","The batch system to submit the job",True,False),
+        ("store",str,"cwl_batch_system","--cwl-batch-system","The batch system to submit the cwl jobs (uses --batch-system if not set)",False,False),
+        ("store_true",bool,"debug_mode","--debug","Run the runner in debug mode",False,False),
+        ("store",str,"project_path","--path","Path to Project files (to store in database)",False,True),
+        ("store_true",bool,"test_mode","--test-mode","Run the runner in test mode",False,False),
+        ("store_true",bool,"force_overwrite_results","--force-overwrite-results","Force overwrite if results folder already exists",False,False),
+        ("store",str,"on_start","--on-start","Python script to run when the workflow starts",False,True),
+        ("store",str,"on_complete","--on-complete","Python script to run when the workflow completes (either fail or succeed)",False,True),
+        ("store",str,"on_fail","--on-fail","Python script to run when the workflow fails",False,True),
+        ("store",str,"on_success","--on-success","Python script to run when the workflow succeeds",False,True),
+        ("store_true",bool,"use_docker","--use-docker","Use Docker instead of singularity",False,False),
+        ("store",str,"docker_registry","--docker-registry","Dockerhub registry to pull ( invoked only with --use-docker)",False,False)
+    ]
+    return requirements_list
+
+def parse_workflow_args(params,requirements_list):
+    requirements_dict = {}
+    params_dict = params.__dict__
+    for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
+        workflow_param_key = parser_dest
+        if workflow_param_key in params_dict:
+            workflow_param_value = params_dict[workflow_param_key]
+            if is_path:
+                if workflow_param_value:
+                    requirements_value = None
+                    if isinstance(workflow_param_value, list):
+                        requirements_value = []
+                        for single_param in workflow_param_value:
+                            check_if_argument_file_exists(single_param)
+                            single_param_value = os.path.abspath(single_param)
+                            requirements_value.append(single_param_value)
+                    else:
+                        check_if_argument_file_exists(workflow_param_value)
+                        requirements_value = os.path.abspath(workflow_param_value)
+            else:
+                requirements_value = workflow_param_value
+            requirements_dict[workflow_param_key] = requirements_value
+    return requirements_dict
+
+def add_specific_args(parser,requirements_list):
+    parser = add_workflow_requirement(parser,requirements_list)
+    return parser
 
 def run_command(command,stdout_file,stderr_file,shell,wait):
     if stdout_file and stderr_file:
