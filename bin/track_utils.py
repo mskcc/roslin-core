@@ -1054,6 +1054,17 @@ class RoslinWorkflow(object):
     def on_fail(self,logger):
         self.run_hook("on_fail","on fail",logger)
     def on_success(self,logger):
+        output_dir = self.params['output_dir']
+        output_meta_json = self.params['output_meta_json']
+        meta_list = []
+        for single_item in os.listdir(output_dir):
+            item_path = os.path.join(output_dir,single_item)
+            if os.path.isdir(item_path):
+                if single_item != old_jobs_folder:
+                    output_meta_path = os.path.join(item_path,'output-meta.json')
+                    meta_list.append(output_meta_path)
+        merged_yaml_data = merge_yaml_list(meta_list)
+        save_yaml(output_meta_json,merged_yaml_data)
         self.run_hook("on_success","on success",logger)
 
     def run_hook(self,hook_key, hook_name,logger):
