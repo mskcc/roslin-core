@@ -501,15 +501,15 @@ def check_yaml_boolean_value(yaml_value):
     else:
         return None
 
-def save_yaml(yaml_path,yaml_data):
-    import yaml
-    with open(yaml_path, 'w') as yaml_file:
-        yaml.dump(yaml_data, yaml_file)
-
 def convert_to_snake_case(input_str):
     first_str = re.sub('(.)([A-Z][a-z]+)',r'\1_\2',input_str)
     second_str = re.sub('([a-z0-9])([A-Z])',r'\1_\2',first_str).lower()
     return second_str
+
+def convert_to_upper_camel_case(input_str):
+    components = input_str.split('_')
+    converted_str = ''.join(x.title() for x in components)
+    return converted_str
 
 def check_tmp_env(logger=None):
     error_message = ""
@@ -725,6 +725,29 @@ def read_pipeline_settings(pipeline_name, pipeline_version):
 
     pipeline_name_version = os.path.join(pipeline_name,pipeline_version)
     settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "settings.sh")
+
+    if not os.path.exists(settings_path):
+        return None
+
+    command = ['bash', '-c', 'source {} && env'.format(settings_path)]
+
+    proc = Popen(command, stdout=PIPE)
+
+    source_env = {}
+
+    for line in proc.stdout:
+        (key, _, value) = line.partition("=")
+        source_env[key] = value.rstrip()
+
+    proc.communicate()
+
+    return source_env
+
+def read_test_settings(pipeline_name, pipeline_version):
+    "read the Roslin Pipeline settings"
+
+    pipeline_name_version = os.path.join(pipeline_name,pipeline_version)
+    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "test-settings.sh")
 
     if not os.path.exists(settings_path):
         return None
