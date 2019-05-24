@@ -418,6 +418,7 @@ def main():
                 copy_ignore_same_file(input_metadata_location,input_metadata_work_dir_location)
     else:
         project_path = None
+        input_files_blob = None
 
     jobstore_uuid_path = os.path.join(work_dir,JOBSTORE_UUID_FILE_NAME)
     input_yaml_path = os.path.join(work_dir,INPUT_YAML_FILE_NAME)
