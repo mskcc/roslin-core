@@ -2,7 +2,7 @@
 from __future__ import print_function
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
-from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists, check_tmp_env
+from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists, check_tmp_env, load_yaml, get_common_args, get_leader_args, parse_workflow_args, add_specific_args, get_dir_paths
 from toil.common import Toil
 from toil.job import Job, JobNode
 from toil.leader import FailedJobsException
@@ -55,11 +55,9 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
         clean_workflow.set()
         project_killed_message = ""
         project_killed_event = {}
-        work_dir = workflow.params['work_dir']
-        log_dir = os.path.join(work_dir,'log')
-        tmp_dir = workflow.params['tmp_dir']
+        log_dir, work_dir, tmp_dir  = get_dir_paths(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'])
         dir_paths = (log_dir,work_dir,tmp_dir)
-        user_kill_signal = check_user_kill_signal(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'], dir_paths)
+        user_kill_signal = check_user_kill_signal(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'], dir_paths=dir_paths)
         if user_kill_signal and 'user_kill_signal' not in clean_up_dict:
             clean_up_dict['user_kill_signal'] = user_kill_signal
         if 'user_kill_signal' in clean_up_dict:
