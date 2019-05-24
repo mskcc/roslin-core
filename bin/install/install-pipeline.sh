@@ -180,9 +180,6 @@ do
 done
 #<--
 
-# copy jumpstart examples
-roslin_create_test_files.py --name ${ROSLIN_PIPELINE_NAME} --version ${ROSLIN_PIPELINE_VERSION}
-
 # clean up
 rm -rf ${install_temp_path}
 

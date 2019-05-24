@@ -63,3 +63,6 @@ fi
 
 # create user directory
 mkdir -p ${ROSLIN_PIPELINE_WORKSPACE_PATH}/${user_id}
+
+# create test files
+roslin_create_test_files.py --name ${ROSLIN_PIPELINE_NAME} --version ${ROSLIN_PIPELINE_VERSION}
