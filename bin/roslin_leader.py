@@ -185,198 +185,11 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
 if __name__ == "__main__":
     parser = Job.Runner.getDefaultArgumentParser()
     parser_project_options = parser.add_argument_group("Roslin project options","Project options")
-    parser_project_options.add_argument(
-        "--id",
-        action="store",
-        dest="project_id",
-        help="Project ID (e.g. Proj_5088_B)",
-        required=True
-    )
-    parser_project_options.add_argument(
-        "--jobstore-id",
-        action="store",
-        dest="jobstore_uuid",
-        help="The uuid of the jobstore",
-        required=True
-    )
-    parser_project_options.add_argument(
-        "--debug-mode",
-        action="store_true",
-        dest="debug_mode",
-        help="Run the runner in debug mode"
-    )
-    parser_project_options.add_argument(
-        "--test-mode",
-        action="store_true",
-        dest="test_mode",
-        help="Run the runner in test mode"
-    )
-    parser_project_options.add_argument(
-        "--uuid",
-        action="store",
-        dest="project_uuid",
-        help="The uuid of the project",
-        required=True
-    )
-    parser_project_options.add_argument(
-        "--inputs",
-        action="store",
-        dest="inputs_yaml",
-        help="The path to your input yaml file (e.g. /ifs/projects/CMO/Proj_5088_B/inputs.yaml)",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--project-output",
-        action="store",
-        dest="project_output",
-        help="Path to Project output",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--log-folder",
-        action="store",
-        dest="log_folder",
-        help="Path to folder to store the logs",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--project-workdir",
-        action="store",
-        dest="project_workdir",
-        help="Path to Project workdir",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--project-tmpDir",
-        action="store",
-        dest="project_tmpdir",
-        help="Path to Project tmpdir",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--workflow",
-        action="store",
-        dest="workflow_name",
-        help="Workflow name (e.g. project-workflow)",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--pipeline-name",
-        action="store",
-        dest="pipeline_name",
-        help="Pipeline name (e.g. variant)",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--pipeline-version",
-        action="store",
-        dest="pipeline_version",
-        help="Pipeline version (e.g. 2.4.0)",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--batch-system",
-        action="store",
-        dest="batch_system",
-        choices=list(registry._UNIQUE_NAME),
-        help="The batch system to submit the job",
-        default="singleMachine",
-        required=True
-    )
-
-    parser_project_options.add_argument(
-        "--cwl-batch-system",
-        action="store",
-        dest="cwl_batch_system",
-        choices=list(registry._UNIQUE_NAME),
-        help="The batch system to submit the cwl jobs (uses --batch-system if not set)",
-        required=False
-    )
-
-    parser_project_options.add_argument(
-        "--run-attempt",
-        action="store",
-        dest="run_attempt",
-        help="Number of times the run has been ateempted, used to id the run when restarting the job",
-        required=False
-    )
-    parser_project_options.add_argument(
-        "--retry-count",
-        action="store",
-        dest="retry_count",
-        help="Number of times the piepline can retry failed jobs",
-        required=True
-    )
-    parser_project_options.add_argument(
-        "--project-results",
-        action="store",
-        dest="project_results",
-        help="Path to the output directory to store results",
-        required=False
-    )
-    parser.add_argument(
-        "--force-overwrite-results",
-        action="store_true",
-        dest="force_overwrite_results",
-        help="Force overwrite if results folder already exists",
-        required=False
-    )
-    parser.add_argument(
-        "--on-start",
-        action="store",
-        dest="on_start",
-        help="Python script to run when the workflow starts",
-        required=False
-    )
-    parser.add_argument(
-        "--on-complete",
-        action="store",
-        dest="on_complete",
-        help="Python script to run when the workflow completes (either fail or succeed)",
-        required=False
-    )
-    parser.add_argument(
-        "--on-fail",
-        action="store",
-        dest="on_fail",
-        help="Python script to run when the workflow fails",
-        required=False
-    )
-    parser.add_argument(
-        "--on-success",
-        action="store",
-        dest="on_success",
-        help="Python script to run when the workflow succeeds",
-        required=False
-    )
-    parser.add_argument(
-        "--use-docker",
-        action="store_true",
-        dest="use_docker",
-        help="Use Docker instead of singularity",
-        required=False
-    )
-    parser.add_argument(
-        "--docker-registry",
-        action="store",
-        dest="docker_registry",
-        help="Dockerhub registry to pull ( invoked only with --use-docker)",
-        required=False
-    )
+    common_requirements_list = get_common_args()
+    leader_requirements_list = get_leader_args()
+    parser_project_options = add_specific_args(parser_project_options,common_requirements_list)
+    parser_project_options = add_specific_args(parser_project_options,leader_requirements_list)
     options, other_options = parser.parse_known_args()
-    check_if_argument_file_exists(options.on_start)
-    check_if_argument_file_exists(options.on_complete)
-    check_if_argument_file_exists(options.on_fail)
-    check_if_argument_file_exists(options.on_success)
-    check_if_argument_file_exists(options.inputs_yaml)
     pipeline_name = options.pipeline_name
     pipeline_version = options.pipeline_version
     log_folder = options.log_folder
@@ -392,31 +205,10 @@ if __name__ == "__main__":
     workflow_parser = argparse.ArgumentParser(parents=[ parser ], add_help=False, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     roslin_workflow = roslin_workflow_class(None)
     requirements_obj = roslin_workflow.add_requirement(workflow_parser)
-    requirements_dict = {}
     if requirements_obj:
         workflow_parser, requirements_list = requirements_obj
         workflow_params = workflow_parser.parse_args()
-        for parser_action, parser_type, parser_dest, parser_option, parser_help, parser_required, is_path in requirements_list:
-            workflow_param_key = parser_dest
-            workflow_param_value = workflow_params.__dict__[workflow_param_key]
-            if is_path:
-                requirements_value = None
-                if isinstance(workflow_param_value, list):
-                    requirements_value = []
-                    for single_param in workflow_param_value:
-                        if not os.path.exists(single_param):
-                            print_error("ERROR: Could not find "+ str(single_param))
-                            sys.exit(1)
-                        single_param_value = os.path.abspath(single_param)
-                        requirements_value.append(single_param_value)
-                else:
-                    if not os.path.exists(workflow_param_value):
-                        print_error("ERROR: Could not find "+ str(workflow_param_value))
-                        sys.exit(1)
-                    requirements_value = os.path.abspath(workflow_param_value)
-            else:
-                requirements_value = workflow_param_value
-            requirements_dict[workflow_param_key] = requirements_value
+        requirements_dict = parse_workflow_args(workflow_params,requirements_list)
         options = workflow_params
     job_store = options.jobStore
     if options.debug_mode:
@@ -481,10 +273,16 @@ if __name__ == "__main__":
         os.environ['DOCKER_REGISTRY_NAME'] = options.docker_registry
     with Toil(options) as toil_obj:
         workflow_failed = False
-        workflow_params_path = os.path.join(options.log_folder,"workflow_params.json")
-        workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'results_dir':options.project_results, 'force_overwrite_results':options.force_overwrite_results, 'inputs': input_yaml_data, 'workflow_params_path': workflow_params_path, 'on_start': options.on_start, 'on_complete': options.on_complete, 'on_fail': options.on_fail, 'on_success': options.on_success, 'env':dict(os.environ), 'max_mem': max_mem, 'max_cpu':max_cpu}
-        workflow_params = add_version_str(workflow_params)
-        workflow_params['requirements'] = requirements_dict
+        workflow_params = {}
+        workflow_params_path = os.path.join(project_workdir,"workflow_params.json")
+        if os.path.exists(workflow_params_path):
+            with open(workflow_params_path,"r") as workflow_params_file:
+                workflow_params = json.load(workflow_params_file)
+            workflow_params['restart'] = True
+        else:
+            workflow_params = {'project_id':options.project_id, 'job_uuid':options.project_uuid, 'pipeline_name':options.pipeline_name, 'pipeline_version':options.pipeline_version, 'batch_system':cwl_batch_system, 'jobstore':options.jobstore_uuid, 'restart':restart, 'debug_mode':options.debug_mode, 'output_dir':options.project_output, 'tmp_dir':project_tmpdir, 'workflow_name':options.workflow_name, 'input_yaml':options.inputs_yaml,'log_folder':options.log_folder, 'run_attempt':run_attempt, 'work_dir':project_workdir,'test_mode':options.test_mode,'num_pairs':num_pairs,'num_groups':num_groups, 'project_work_dir':work_dir, 'results_dir':options.project_results, 'force_overwrite_results':options.force_overwrite_results, 'inputs': input_yaml_data, 'workflow_params_path': workflow_params_path, 'on_start': options.on_start, 'on_complete': options.on_complete, 'on_fail': options.on_fail, 'on_success': options.on_success, 'env':dict(os.environ), 'max_mem': max_mem, 'max_cpu':max_cpu}
+            workflow_params = add_version_str(workflow_params)
+            workflow_params['requirements'] = requirements_dict
         roslin_workflow = roslin_workflow_class(workflow_params)
         clean_up_dict = {'logger':logger,'toil_obj':toil_obj,'track_leader':track_leader,'clean_workflow':clean_workflow,'batch_system':options.batch_system,'uuid':options.project_uuid,'workflow':roslin_workflow}
         signal.signal(signal.SIGINT, partial(cleanup, clean_up_dict))
