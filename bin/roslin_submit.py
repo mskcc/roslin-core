@@ -332,7 +332,6 @@ def get_pipeline_name_and_versions():
 
     return {'pipeline_name_choices':pipeline_name_choices,'pipeline_version_choices':pipeline_version_choices,'pipeline_name_help':pipeline_name_help,'pipeline_version_help':pipeline_version_help}
 
-
 def main():
     "main function"
 
