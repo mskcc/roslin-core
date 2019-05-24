@@ -149,7 +149,7 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     pipeline_version = workflow_params['pipeline_version']
     workflow_log_file = workflow_params['log_file']
     run_attempt = int(workflow_params['run_attempt'])
-    roslin_track = RoslinTrack(job_store_path,job_uuid,work_dir,tmp_dir,restart,run_attempt,logger)
+    roslin_track = RoslinTrack(job_store_path,job_uuid,work_dir,tmp_dir,restart,run_attempt,True,logger)
     #job_store_obj = ReadOnlyFileJobStore(job_store_path)
     leader_job_id = ""
     job_list = []
