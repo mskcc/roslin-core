@@ -277,7 +277,7 @@ def track_job_helper(track_job_flag,params,job_params,restart,logger):
     run_attempt = params['run_attempt']
     full_job_store_path = os.path.join(tmp_dir,job_store_path)
     poll_interval = job_params['poll_interval']
-    roslin_track = RoslinTrack(job_store_path,project_uuid,work_dir,tmp_dir,restart,run_attempt,logger)
+    roslin_track = RoslinTrack(job_store_path,project_uuid,work_dir,tmp_dir,restart,run_attempt,False,logger)
     roslin_track.check_status(poll_interval,track_job_flag)
 
 
@@ -1424,7 +1424,7 @@ class ReadOnlyFileJobStore(FileJobStore):
 
 class RoslinTrack():
 
-    def __init__(self,job_store_path,project_uuid,work_dir,tmp_dir,restart,run_attempt,logger):
+    def __init__(self,job_store_path,project_uuid,work_dir,tmp_dir,restart,run_attempt,show_cwl_internal,logger):
         self.job_store_path = job_store_path
         self.work_dir = work_dir
         self.tmp_dir = tmp_dir
@@ -1443,6 +1443,7 @@ class RoslinTrack():
         self.restart = restart
         self.restart_num = 2
         self.logger = logger
+        self.show_cwl_internal = show_cwl_internal
 
     def create_job_id(self,jobStoreID,remainingRetryCount):
         logger = self.logger
@@ -1498,7 +1499,7 @@ class RoslinTrack():
         current_time = get_current_time()
         if job_id not in failed_job_list:
             failed_job_list.append(job_id)
-            if job_name not in CWL_INTERNAL_JOBS:
+            if job_name not in CWL_INTERNAL_JOBS or self.show_cwl_internal:
                 job_key = self.make_key_from_file(job_name,True)
                 if job_key in job_dict:
                     tool_dict = job_dict[job_key]
@@ -1582,7 +1583,7 @@ class RoslinTrack():
             self.mark_job_as_failed(job_id,job_name)
         for single_job, result in toil_state_obj.updatedJobs:
             job_name = single_job.jobName
-            if job_name not in CWL_INTERNAL_JOBS:
+            if job_name not in CWL_INTERNAL_JOBS or self.show_cwl_internal:
                 job_disk = single_job._disk/float(1e9)
                 job_memory = single_job._memory/float(1e9)
                 job_cores = single_job._cores
@@ -1656,7 +1657,7 @@ class RoslinTrack():
                     job_stream_contents = safeUnpickleFromStream(job_stream)
                     job_stream_contents_dict = job_stream_contents.__dict__
                     job_name = job_stream_contents_dict['jobName']
-                    if job_name not in CWL_INTERNAL_JOBS:
+                    if job_name not in CWL_INTERNAL_JOBS or self.show_cwl_internal:
                         job_id = self.make_key_from_file(job_name,True)
                         if 'cwljob' in job_stream_contents_dict:
                             job_info = job_stream_contents_dict['cwljob']
