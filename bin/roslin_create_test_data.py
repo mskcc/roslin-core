@@ -43,7 +43,8 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 def create_test_data(pipeline_settings,num_threads,debug_mode):
 	pipeline_name = pipeline_settings['ROSLIN_PIPELINE_NAME']
 	pipeline_version = pipeline_settings['ROSLIN_PIPELINE_VERSION']
-	pipeline_dependency_path = pipeline_settings['ROSLIN_DEPENDENCY_PATH']
+	pipeline_workspace_path = pipeline_settings['ROSLIN_PIPELINE_WORKSPACE_PATH']
+	pipeline_dependency_path = os.path.join(pipeline_workspace_path,'test_data')
 	pipeleine_template_path = os.path.join(pipeline_dependency_path,'examples','Proj_ROSLIN_DEV')
 	batch_system = 'singleMachine'
 	test_data_name = 'roslin_{}_version_{}_test_data'.format(pipeline_name,str(pipeline_version))
@@ -278,23 +279,7 @@ def main():
 	debug_mode = params.debug_mode
 	# load the Roslin Pipeline settings
 	pipeline_settings = load_pipeline_settings(pipeline_name, pipeline_version)
-	#create_test_data(pipeline_settings,threads,debug_mode)
-	dependency_path = '/ifs/work/pi/roslin-core/2.1.0/roslin_variant_version_2.5.0_test_data'
-	meta_path = '/ifs/work/pi/roslin-core/2.1.0/roslin_variant_version_2.5.0_test_data/meta'
-	data_path = os.path.join(dependency_path,'examples','data')
-	for single_item in os.listdir(meta_path):
-		item_path = os.path.join(meta_path,single_item)
-		template_path = item_path + '.template'
-		if os.path.isfile(item_path):
-			with open(item_path,'r') as meta_file:
-				meta_data = meta_file.read()
-			template_data = meta_data.replace(data_path,'{{ data_path }}')
-			with open(template_path,'w') as template_file:
-				template_file.write(template_data)
-			os.remove(item_path)
-	dependency_name = os.path.basename(dependency_path) + ".tar.gz"
-	with tarfile.open(dependency_name,"w:gz") as tar:
-		tar.add(dependency_path,arcname=os.path.sep)
+	create_test_data(pipeline_settings,threads,debug_mode)
 
 if __name__ == "__main__":
 
