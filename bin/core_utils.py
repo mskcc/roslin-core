@@ -18,6 +18,7 @@ import traceback
 import re
 import inspect
 import stat
+import math
 
 starting_log_message="------------ starting ------------"
 exiting_log_message="------------ exiting ------------"
@@ -804,7 +805,9 @@ def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads,
     cmds = list()
     groups = list()
 
-    groups = list(chunks(file_list, num_workers))
+    chunk_size = int(math.ceil(len(file_list)/float(num_workers)))
+
+    groups = list(chunks(file_list, chunk_size))
 
     worker_group = None
     cmd = None
