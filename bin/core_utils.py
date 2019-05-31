@@ -1,5 +1,4 @@
 from __future__ import print_function
-from builtins import super
 from subprocess import PIPE, Popen, STDOUT
 import os, sys, argparse
 from multiprocessing.dummy import Pool
