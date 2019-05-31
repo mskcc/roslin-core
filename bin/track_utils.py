@@ -32,6 +32,7 @@ import yaml
 import copy
 import traceback
 import re
+import glob
 time_format="%Y-%m-%d %H:%M:%S"
 log_format="(%(current_time)s) [%(name)s:%(levelname)s] %(message)s"
 termination_file_name = "killed-by-user.json"
@@ -830,9 +831,9 @@ class RoslinWorkflow(object):
         facets_directory = os.path.join(results_directory,'facets')
         qc_directory = os.path.join(results_directory,'qc')
         log_dir = params['log_folder']
-        project_id = params['project_id']
-        sample_summary_file = project_id + "_SampleSummary.txt"
-        sample_summary_path = os.path.join(qc_directory,sample_summary_file)
+        sample_summary_name = "*_SampleSummary.txt"
+        sample_summary_glob = os.path.join(qc_directory,sample_summary_name)
+        sample_summary_path = glob.glob(sample_summary_glob)[0]
         debug_mode = params['debug_mode']
         pipeline_bin_path = self.params['env']['ROSLIN_PIPELINE_BIN_PATH']
         roslin_analysis_script = os.path.join(pipeline_bin_path,'scripts','roslin_analysis_helper.py')
