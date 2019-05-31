@@ -835,7 +835,6 @@ class RoslinWorkflow(object):
         log_dir = params['log_folder']
         sample_summary_name = "*_SampleSummary.txt"
         sample_summary_glob = os.path.join(qc_directory,sample_summary_name)
-        sample_summary_path = glob.glob(sample_summary_glob)[0]
         debug_mode = params['debug_mode']
         pipeline_bin_path = self.params['env']['ROSLIN_PIPELINE_BIN_PATH']
         roslin_analysis_script = os.path.join(pipeline_bin_path,'scripts','roslin_analysis_helper.py')
@@ -845,7 +844,7 @@ class RoslinWorkflow(object):
         '--facets_directory',facets_directory,
         '--results_directory',results_directory,
         '--log_directory',log_dir,
-        '--sample_summary',sample_summary_path]
+        '--sample_summary',sample_summary_glob]
         if debug_mode:
             roslin_analysis_command.append('--debug')
         job_params = self.set_default_job_params()
