@@ -16,6 +16,7 @@ import tempfile
 import shutil
 import time
 import tarfile
+import signal
 ROSLIN_CORE_BIN_PATH = os.environ['ROSLIN_CORE_BIN_PATH']
 sys.path.append(ROSLIN_CORE_BIN_PATH)
 from core_utils import get_choices, create_mpgr, load_pipeline_settings, get_workflow_config
@@ -150,64 +151,72 @@ def run_roslin_parallel(workflow_info,dependency_path,num_threads,debug_mode):
 		else:
 			pending_list.append(single_workflow)
 	job_list = [(submission_queue,status_queue)] * num_threads
+	original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 	pool = Pool(num_threads)
-	run_results = pool.map_async(run_workflow_wrapper,job_list)
-	set_sentinel = False
-	while run_results.ready() == False and set_sentinel == False:
-		single_item = status_queue.get()
-		thread_name = single_item['name']
-		workflow_name = single_item['workflow']
-		if single_item['status'] == 0:
-			if workflow_name == None:
-				continue
+	signal.signal(signal.SIGINT, original_sigint_handler)
+	try:
+		run_results = pool.map_async(run_workflow_wrapper,job_list)
+		set_sentinel = False
+		while run_results.ready() == False and set_sentinel == False:
+			single_item = status_queue.get()
+			thread_name = single_item['name']
+			workflow_name = single_item['workflow']
+			if single_item['status'] == 0:
+				if workflow_name == None:
+					continue
+				else:
+					total_processed = total_processed + 1
+					logger.info("["+thread_name+"] " + workflow_name + " finished ( " + str(total_processed) + "/"+str(total_number_of_jobs)+" )")
+					roslin_submission_path = os.path.join(current_dir,'roslin_runs',workflow_name,"submission.json")
+					with open(roslin_submission_path,"r") as submission_file:
+						submission_data = json.load(submission_file)
+					output_dir = submission_data['project_output_dir']
+					output_meta_path = os.path.join(output_dir,'output-meta.json')
+					dependency_meta_path = os.path.join(meta_path,workflow_name)
+					dependency_output_path = os.path.join(dependency_path,'examples','data',workflow_name)
+					os.mkdir(dependency_output_path)
+					for single_item in os.listdir(output_dir):
+					    item_path = os.path.join(output_dir,single_item)
+					    if os.path.isdir(item_path):
+					        if single_item != old_jobs_folder:
+					        	dependency_data_path = os.path.join(dependency_output_path,single_item)
+					        	shutil.copytree(item_path,dependency_data_path)
+					output_meta_data = ''
+					with open(output_meta_path,'r') as output_meta_file:
+						output_meta_data = output_meta_file.read()
+					dependency_output_meta = output_meta_data.replace(output_dir,dependency_output_path)
+					with open(dependency_meta_path,'w') as dependency_meta_file:
+						dependency_meta_file.write(dependency_output_meta)
+					if debug_mode == True:
+						verbose_logging(single_item)
+					finished_list.append(workflow_name)
+					submitted_list = []
+					for single_workflow in pending_list:
+						dependency_finished = True
+						for single_dependency in workflow_info[single_workflow]:
+							if single_dependency not in finished_list:
+								dependency_finished = False
+						if dependency_finished:
+							submission_queue.put(single_workflow)
+							submitted_list.append(single_workflow)
+					for single_workflow in submitted_list:
+						pending_list.remove(single_workflow)
 			else:
-				total_processed = total_processed + 1
-				logger.info("["+thread_name+"] " + workflow_name + " finished ( " + str(total_processed) + "/"+str(total_number_of_jobs)+" )")
-				roslin_submission_path = os.path.join(current_dir,'roslin_runs',workflow_name,"submission.json")
-				with open(roslin_submission_path,"r") as submission_file:
-					submission_data = json.load(submission_file)
-				output_dir = submission_data['project_output_dir']
-				output_meta_path = os.path.join(output_dir,'output-meta.json')
-				dependency_meta_path = os.path.join(meta_path,workflow_name)
-				dependency_output_path = os.path.join(dependency_path,'examples','data',workflow_name)
-				os.mkdir(dependency_output_path)
-				for single_item in os.listdir(output_dir):
-				    item_path = os.path.join(output_dir,single_item)
-				    if os.path.isdir(item_path):
-				        if single_item != old_jobs_folder:
-				        	dependency_data_path = os.path.join(dependency_output_path,single_item)
-				        	shutil.copytree(item_path,dependency_data_path)
-				output_meta_data = ''
-				with open(output_meta_path,'r') as output_meta_file:
-					output_meta_data = output_meta_file.read()
-				dependency_output_meta = output_meta_data.replace(output_dir,dependency_output_path)
-				with open(dependency_meta_path,'w') as dependency_meta_file:
-					dependency_meta_file.write(dependency_output_meta)
-				if debug_mode == True:
-					verbose_logging(single_item)
-				finished_list.append(workflow_name)
-				submitted_list = []
-				for single_workflow in pending_list:
-					dependency_finished = True
-					for single_dependency in workflow_info[single_workflow]:
-						if single_dependency not in finished_list:
-							dependency_finished = False
-					if dependency_finished:
-						submission_queue.put(single_workflow)
-						submitted_list.append(single_workflow)
-				for single_workflow in submitted_list:
-					pending_list.remove(single_workflow)
-		else:
-			status_message = "["+thread_name+"] " + workflow_name + " failed"
-			verbose_logging(single_item)
-			logger.error(status_message)
-			pool.terminate()
-			sys.exit(status_message)
-		if total_processed==total_number_of_jobs and not set_sentinel:
-			sentinel_list = [None] * num_threads
-			for single_sentinel in sentinel_list:
-				submission_queue.put(single_sentinel)
-			set_sentinel = True
+				status_message = "["+thread_name+"] " + workflow_name + " failed"
+				verbose_logging(single_item)
+				logger.error(status_message)
+				pool.terminate()
+				sys.exit(status_message)
+			if total_processed==total_number_of_jobs and not set_sentinel:
+				sentinel_list = [None] * num_threads
+				for single_sentinel in sentinel_list:
+					submission_queue.put(single_sentinel)
+				set_sentinel = True
+	except KeyboardInterrupt:
+        exit_message = "Keyboard interrupt, terminating workers"
+        logger.info(exit_message)
+        pool.terminate()
+        sys.exit(exit_message)
 	logger.info("---------- Finished running roslin workflows ----------")
 	data_path = os.path.join(dependency_path,'examples','data')
 	for single_item in os.listdir(meta_path):
