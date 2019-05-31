@@ -385,6 +385,8 @@ def update_run_results_restart(logger,project_uuid,submitted_time):
     if not run_result_doc:
         return
     restart_dict = {'status':run_result_doc['status'],'timestamp':run_result_doc['timestamp']}
+    if 'restarts' not in run_result_doc:
+        run_result_doc['restarts'] = []
     run_result_doc['restarts'].append(restart_dict)
     run_result_doc['status'] = status_name_dict['pending']
     run_result_doc['timestamp'] = { "started": None, "finished": None, "submitted": submitted_time, "lastUpdated": get_current_time(), "duration": None }

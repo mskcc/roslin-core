@@ -132,9 +132,6 @@ def main():
     if project_path:
         input_files_blob = targzip_project_files(project_id, project_path)
 
-    if workflow_params_data['max_mem'] != parser.get_default('max_mem') or workflow_params_data['max_cpu'] != parser.get_default('max_cpu'):
-        handle_change_max_memory(work_dir,workflow_params_data['max_mem'],workflow_params_data['max_cpu'],inputs_yaml_work_dir,workflow_params_data['debug_mode'])
-
     requirements_list = []
     for single_workflow in workflow_params_data['workflows']:
         requirements_list.extend(workflow_params_data['workflows'][single_workflow]['input_config'])
