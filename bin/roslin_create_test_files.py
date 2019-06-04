@@ -3,10 +3,7 @@ import sys
 import os
 import json
 import argparse
-import multiprocessing
-from multiprocessing.dummy import Pool, current_process
 import logging
-from subprocess import Popen, PIPE, call
 import sys
 import os
 from Queue import Queue
