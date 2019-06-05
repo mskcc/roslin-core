@@ -70,8 +70,7 @@ def create_meta_files(test_data_path):
 def create_test_data(pipeline_settings,test_settings):
 	pipeline_name = pipeline_settings['ROSLIN_PIPELINE_NAME']
 	pipeline_version = pipeline_settings['ROSLIN_PIPELINE_VERSION']
-	pipeline_dependency_path = pipeline_settings['ROSLIN_DEPENDENCY_PATH']
-	workflow_path = os.path.join(pipeline_dependency_path,'examples')
+	workflow_path = pipeline_settings['ROSLIN_EXAMPLE_PATH']
 	test_data_path = os.path.join(pipeline_settings['ROSLIN_PIPELINE_WORKSPACE_PATH'],'test_data')
 	test_data_url = test_settings['ROSLIN_TEST_DATA_URL']
 	test_data_archive = test_settings['ROSLIN_TEST_DATA_PATH']
