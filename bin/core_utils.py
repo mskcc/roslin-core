@@ -2,7 +2,10 @@ from __future__ import print_function
 from subprocess import PIPE, Popen, STDOUT
 import os, sys, argparse
 from multiprocessing.dummy import Pool
-from queue import Queue
+try:
+   import queue
+except ImportError:
+   import Queue as queue
 from jinja2 import Template
 import time
 import shutil
