@@ -3,9 +3,9 @@ from subprocess import PIPE, Popen, STDOUT
 import os, sys, argparse
 from multiprocessing.dummy import Pool
 try:
-   import queue
+    from queue import Queue
 except ImportError:
-   import Queue as queue
+    from Queue import Queue
 from jinja2 import Template
 import time
 import shutil
