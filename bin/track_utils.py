@@ -645,7 +645,7 @@ class RoslinJob(Job):
         current_name = job_params['name']
         Job.__init__(self,  memory=memory, cores=int(cores), disk=disk)
         if 'cwl' in job_params:
-            self.__dict__['jobName'] = 'CWLWorkflow'
+            self.__dict__['jobName'] = 'CWLJobWrapper-'+current_name
         else:
             self.__dict__['jobName'] = current_name
         self.compressed_job_function = dill.dumps(job_function)
