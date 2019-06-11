@@ -27,6 +27,8 @@ starting_log_message="------------ starting ------------"
 exiting_log_message="------------ exiting ------------"
 finished_log_message="------------ finished ------------"
 
+ignore_lines = ['No unfinished job found','Cannot get parameter information from lsf.conf or ego.conf for LIM from']
+
 def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
     try:
         pre_exec_fn = None
@@ -48,7 +50,12 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
                 for single_line in subprocess_stdout:
                     single_output_line = single_line.rstrip()
                     if single_output_line:
-                        print(single_output_line)
+                        ignore_line = False
+                        for single_ignore_line in ignore_lines:
+                            if single_ignore_line in single_output_line:
+                                ignore_line = True
+                        if not ignore_line:
+                            print(single_output_line)
                         output = output + "\n" + single_output_line
                         if exiting_log_message in single_output_line or finished_log_message in single_output_line:
                             single_process.stdout.close()
