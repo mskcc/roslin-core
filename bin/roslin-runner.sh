@@ -187,7 +187,7 @@ else
 fi
 
 # LSF+TOIL
-export TOIL_LSF_PROJECT="${job_uuid}"
+export TOIL_LSF_ARGS="${TOIL_LSF_ARGS} -P ${job_uuid}"
 job_store_uuid=${JOBSTORE_ID}
 
 # save job uuid
