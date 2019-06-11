@@ -271,7 +271,7 @@ def kill_all_lsf_jobs(logger, uuid):
     if logger:
         from track_utils import log
     lsf_kill_str = "bjobs -P "+ str(uuid) + " -o \"jobid delimiter=','\" -noheader"
-    lsf_kill_command = shlex.split(lsf_kill_command)
+    lsf_kill_command = shlex.split(lsf_kill_str)
     kill_process_dict = run_command(lsf_kill_command,None,None,False,True)
     output = kill_process_dict['output']
     error = kill_process_dict['error']
@@ -279,32 +279,33 @@ def kill_all_lsf_jobs(logger, uuid):
         if output:
             list_of_jobs_to_kill = output.split('\n')
             for single_job in list_of_jobs_to_kill:
-                job_name_str = "bjobs -o \"job_name\"" + single_job + "-noheader"
-                job_kill_str = "bkill " + single_job
-                job_name_command = shlex.split(job_name_str)
-                job_kill_command = shlex.split(job_kill_str)
-                job_name_process = run_command(job_name_command,None,None,False,True)
-                output = kill_process_dict['output']
-                if output:
-                    job_kill_message = "Killing LSF job ["+single_job+"] "+ output.rstrip()
-                    if logger:
-                        log(logger,'info',job_kill_message)
-                    else:
-                        print(job_kill_message)
-                    job_kill_process = run_command(job_kill_command,None,None,False,True)
-                    output = job_kill_process['output']
-                    error = job_kill_process['error']
-                    exit_code = job_kill_process['errorcode']
-                    if exit_code != 0:
-                        error_message = "Process exited with code " + exit_code + "\n"
-                        if output:
-                            error_message = "Output: " + output
-                        if error:
-                            error_message = "Error: " + error
+                if single_job:
+                    job_name_str = "bjobs -o \"job_name\" -noheader " + str(single_job)
+                    job_kill_str = "bkill " + single_job
+                    job_name_command = shlex.split(job_name_str)
+                    job_kill_command = shlex.split(job_kill_str)
+                    job_name_process = run_command(job_name_command,None,None,False,True)
+                    output = job_name_process['output']
+                    if output:
+                        job_kill_message = "Killing LSF job ["+single_job+"] "+ output.rstrip()
                         if logger:
-                            log(logger,'error',error_message)
+                            log(logger,'info',job_kill_message)
                         else:
-                            print_error(error_message)
+                            print(job_kill_message)
+                        job_kill_process = run_command(job_kill_command,None,None,False,True)
+                        output = job_kill_process['output']
+                        error = job_kill_process['error']
+                        exit_code = job_kill_process['errorcode']
+                        if exit_code != 0:
+                            error_message = "Process exited with code " + str(exit_code) + "\n"
+                            if output:
+                                error_message = "Output: " + output
+                            if error:
+                                error_message = "Error: " + error
+                            if logger:
+                                log(logger,'error',error_message)
+                            else:
+                                print_error(error_message)
 
 def kill_project(project_name, project_uuid, work_dir, batch_system, user_termination_dict,tmp_path,termination_graceful):
     from track_utils import  update_run_results_status, get_status_names, add_user_event
