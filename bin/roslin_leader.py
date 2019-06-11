@@ -85,10 +85,11 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
                 job_dict = batch_system_obj.currentJobs
             for single_issued_job in issued_jobs:
                 job_killed_message = "Killing toil job: " + str(single_issued_job)
-                if single_issued_job in job_dict:
-                    job_str = job_dict[single_issued_job]
-                    job_name = job_str.split(" ")[1]
-                    job_killed_message = job_killed_message + " ( " + str(job_name) + " ) "
+                if isinstance(job_dict,dict):
+                    if single_issued_job in job_dict:
+                        job_str = job_dict[single_issued_job]
+                        job_name = job_str.split(" ")[1]
+                        job_killed_message = job_killed_message + " ( " + str(job_name) + " ) "
                 log(logger,"info",job_killed_message)
             batch_system_obj.killBatchJobs(issued_jobs)
         if batch_system == 'LSF':
