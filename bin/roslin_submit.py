@@ -171,11 +171,13 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     if max_mem:
         roslin_leader_command.extend(['--maxMemory',max_mem])
     if test_mode:
-        if check_yaml_boolean_value(os.environ['ROSLIN_TEST_USE_DOCKER']):
-            roslin_leader_command.append('--use-docker')
-        if os.environ['ROSLIN_TEST_DOCKER_REGISTRY'] != 'None' and os.environ['ROSLIN_TEST_DOCKER_REGISTRY'].strip() != '':
-            docker_registry = os.environ['ROSLIN_TEST_DOCKER_REGISTRY']
-            roslin_leader_command.extend(['--docker-registry',docker_registry])
+        if 'ROSLIN_TEST_USE_DOCKER' in os.environ:
+            if check_yaml_boolean_value(os.environ['ROSLIN_TEST_USE_DOCKER']):
+                roslin_leader_command.append('--use-docker')
+        if 'ROSLIN_TEST_DOCKER_REGISTRY' in os.environ:
+            if os.environ['ROSLIN_TEST_DOCKER_REGISTRY'] != 'None' and os.environ['ROSLIN_TEST_DOCKER_REGISTRY'].strip() != '':
+                docker_registry = os.environ['ROSLIN_TEST_DOCKER_REGISTRY']
+                roslin_leader_command.extend(['--docker-registry',docker_registry])
     for single_requirement_key in combined_args_dict:
         if single_requirement_key in requirements_dict:
             requirement_value = requirements_dict[single_requirement_key]
