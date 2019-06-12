@@ -905,7 +905,11 @@ def copy_outputs(params,job_params):
         else:
             dst_dir = dst_base_dir
         if not os.path.isdir(dst_dir):
-            os.makedirs(dst_dir)
+            try:
+                os.makedirs(dst_dir)
+            except:
+                error_message = "Make dir: " + str(dst_dir) + " failed.\n"+traceback.format_exc()
+                log(logger,"error",error_message)
         file_list = create_file_list(src_dir,file_patterns)
         single_folder_cmd_list = create_parallel_cp_commands(file_list,dst_dir,max_workers,worker_threads,worker_num,worker_queue)
         cmd_list.extend(single_folder_cmd_list)
