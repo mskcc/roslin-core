@@ -643,6 +643,15 @@ class RoslinJob(Job):
         cores = job_params['cores']
         disk = job_params['disk']
         current_name = job_params['name']
+        if params['batch_system'] == 'LSF':
+            try:
+                mem_unit = memory[-1]
+                mem_limit = float(memory[:-1])
+                core_limit = float(cores)
+                if mem_limit < core_limit:
+                    memory = str(core_limit) + str(mem_unit)
+            except:
+                pass
         Job.__init__(self,  memory=memory, cores=int(cores), disk=disk)
         if 'cwl' in job_params:
             self.__dict__['jobName'] = 'CWLJobWrapper-'+current_name
