@@ -781,9 +781,19 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
     if not pipeline_settings:
         return None
+    pipeline_name_version = os.path.join(pipeline_name,pipeline_version)
+    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "settings.sh")
+    pipeline_env_list= []
+    with open(settings_path,'r') as settings_file:
+        for single_line in settings_file:
+            if 'export' in single_line:
+                single_env = single_line.strip().split("=")[0][7:]
+                pipeline_env_list.append(single_env)
     roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
     roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
     execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
+    for single_env in pipeline_env_list:
+        os.environ[single_env] = pipeline_settings[single_env]
     return pipeline_settings
 
 def chunks(l, n):
