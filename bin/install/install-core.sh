@@ -16,7 +16,6 @@ mkdir -p ${ROSLIN_CORE_SCHEMA_PATH}
 cp -r $BIN_DIRECTORY/* ${ROSLIN_CORE_BIN_PATH}
 cp -r $CONFIG_DIRECTORY/settings.sh ${ROSLIN_CORE_CONFIG_PATH}
 cp -r $SCHEMA_DIRECTORY/* ${ROSLIN_CORE_SCHEMA_PATH}
-cp ${ROSLIN_CORE_BIN_PATH}/roslin-project-status.sh ${ROSLIN_CORE_BIN_PATH}/bjp
 
 # give write permission
 chmod -R g+w ${ROSLIN_CORE_BIN_PATH}/install
