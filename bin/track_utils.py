@@ -754,7 +754,8 @@ class RoslinWorkflow(object):
             self.params['requirement_list'] = []
         if 'copy_outputs_config' not in params:
             self.params['copy_outputs_config'] = {"log": [{"patterns": ["*.log"], "input_folder": "log"},
-                                                          {"patterns": ["*.json"], "input_folder": "log"}],
+                                                          {"patterns": ["*.json"], "input_folder": "log"},
+                                                          {"patterns": ["*.json"], "input_folder": "tmp"}],
                                                "inputs": [{"patterns": ["*.yaml","*.txt"] }]}
 
     def get_workflow_info(self):
