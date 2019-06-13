@@ -56,7 +56,11 @@ echo "This may take a while..."
 tar xzf ${pipeline_package_path} -C ${install_temp_path}
 
 # load the Roslin Pipeline settings.sh found in tgz
+cur_TMP=$TMP
+cur_TMPDIR=$TMPDIR
 source ${install_temp_path}/setup/config/settings.sh
+TMP=$cur_TMP
+TMPDIR=$cur_TMPDIR
 
 # new version string
 new_roslin_pipeline_version="${ROSLIN_PIPELINE_VERSION}-dev-${USER}${suffix}"
