@@ -399,6 +399,7 @@ def write_to_disk(filename, content):
         file_out.write(content)
 
 def get_template(filename):
+    from jinja2 import Template
     "read template from file and return jinja template object"
 
     with open(filename) as template_file:
