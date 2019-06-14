@@ -3,7 +3,6 @@ import sys
 import os
 import re
 import argparse
-import yaml
 import copy
 import csv
 import glob
@@ -22,6 +21,9 @@ def read_pipeline_settings(pipeline_name_version):
         (key, _, value) = line.partition("=")
         source_env[key] = value.rstrip()
     proc.communicate()
+    roslin_pipeline_resource_path = source_env['ROSLIN_PIPELINE_RESOURCE_PATH']
+    roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
+    execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     return source_env
 
 def run_command(params, pipeline_settings):

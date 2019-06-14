@@ -6,7 +6,6 @@ try:
     from queue import Queue
 except ImportError:
     from Queue import Queue
-from jinja2 import Template
 import time
 import shutil
 import filecmp
@@ -461,6 +460,7 @@ def get_workflow_test_args(workflow,dependency_path,sample_num,pair_num):
     return (workflow_args, dependency_file_list)
 
 def create_mpgr(pipeline_name,pipeline_version,workflow,batch_system,mpgr_output_path,dependency_path=None,sample_num=0,pair_num=0,results=None,cwl_batch_system=None,run_args=None):
+    from jinja2 import Template
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
     sys.path.append(pipeline_settings['ROSLIN_PIPELINE_BIN_PATH'])
     dependency_file_list = []
@@ -523,19 +523,19 @@ def convert_to_upper_camel_case(input_str):
     return converted_str
 
 def check_tmp_env(logger=None):
-    error_message = ""
+    warning_message = ""
     if 'TMP' in os.environ:
         if not os.path.exists(os.environ['TMP']):
-            error_message = error_message + "TMP env: {} not found".format(os.environ['TMP'])
+            warning_message = warning_message + "\nWarning: TMP env: {} not found on this machine".format(os.environ['TMP'])
     if 'TMPDIR' in os.environ:
         if not os.path.exists(os.environ['TMPDIR']):
-            error_message = error_message + "TMPDIR env: {} not found".format(os.environ['TMPDIR'])
-    if error_message:
+            warning_message = warning_message + "\nWarning: TMPDIR env: {} not found on this machine".format(os.environ['TMPDIR'])
+    if warning_message:
         if logger:
             from track_utils import log
-            log(logger,'error',error_message)
+            log(logger,'warning',warning_message)
         else:
-            print_error(error_message)
+            print_error(warning_message)
 
 def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_version, termination_graceful):
     log_dir, work_dir, tmp_path = get_dir_paths(project_name,project_uuid,pipeline_name,pipeline_version)
