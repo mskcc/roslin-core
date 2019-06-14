@@ -18,8 +18,7 @@ else:
 test_list = []
 
 def get_examples_path():
-    workspace_path = os.environ['ROSLIN_DEPENDENCY_PATH']
-    examples_path = os.path.join(workspace_path,'examples')
+    examples_path = os.environ['ROSLIN_EXAMPLE_PATH']
     return examples_path
 
 def cleanup():
