@@ -829,6 +829,9 @@ def create_parallel_cp_commands(file_list, dst_dir, num_workers, worker_threads,
 
     chunk_size = int(math.ceil(len(file_list)/float(num_workers)))
 
+    if chunk_size == 0:
+        chunk_size = 1
+
     groups = list(chunks(file_list, chunk_size))
 
     worker_group = None
