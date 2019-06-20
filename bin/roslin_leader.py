@@ -117,11 +117,12 @@ def add_version_str(workflow_params):
 
 def log_workflow_output(logger,roslin_workflow,job_uuid):
     output_meta_path = roslin_workflow.params["output_meta_json"]
-    project_uuid = roslin_workflow.params["job_uuid"]
     output_data = load_yaml(output_meta_path)
     workflow_params = copy.deepcopy(roslin_workflow.params)
     workflow_params['outputs'] = output_data
-    update_workflow_params(logger,project_uuid,workflow_params)
+    del workflow_params['requirement_list']
+    del workflow_params['logger']
+    update_workflow_params(logger,job_uuid,workflow_params)
 
 def workflow_transition(logger,roslin_workflow,job_uuid,status):
     workflow_name = roslin_workflow.params['workflow_name']
@@ -136,6 +137,7 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
         log(logger,'info',done_message)
         roslin_workflow.on_success(logger)
         roslin_workflow.on_complete(logger)
+        log_workflow_output(logger,roslin_workflow,job_uuid)
         log(logger,'info',finished_log_message)
     if status == exit_status:
         exit_message = workflow_name + " has exited"
