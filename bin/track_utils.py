@@ -853,6 +853,7 @@ class RoslinWorkflow(object):
         '--maf_directory',maf_directory,
         '--facets_directory',facets_directory,
         '--results_directory',results_directory,
+        '--output_directory',results_directory,
         '--log_directory',log_dir,
         '--sample_summary',sample_summary_glob]
         if debug_mode:
