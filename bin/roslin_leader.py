@@ -115,6 +115,14 @@ def add_version_str(workflow_params):
     workflow_params['version_str'] = version_str
     return workflow_params
 
+def log_workflow_output(logger,roslin_workflow,job_uuid):
+    output_meta_path = roslin_workflow.params["output_meta_json"]
+    project_uuid = roslin_workflow.params["job_uuid"]
+    output_data = load_yaml(output_meta_path)
+    workflow_params = copy.deepcopy(roslin_workflow.params)
+    workflow_params['outputs'] = output_data
+    update_workflow_params(logger,project_uuid,workflow_params)
+
 def workflow_transition(logger,roslin_workflow,job_uuid,status):
     workflow_name = roslin_workflow.params['workflow_name']
     update_run_results_status(logger,job_uuid,status)
