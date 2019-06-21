@@ -284,9 +284,9 @@ def track_job_helper(track_job_flag,params,job_params,restart,logger):
 
 def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
     run_result_doc = get_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid)
-    run_data_doc = get_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid)
-    if not run_result_doc or not run_data_doc:
+    if not run_result_doc:
         return
+    run_data_doc = construct_run_data_doc(project_uuid,run_result_doc['pipelineJobStoreId'],run_result_doc['pipelineVersion'],run_result_doc['projectId'])
     for single_job_key in status_change:
         single_job_obj = status_change[single_job_key]['job_obj']
         single_tool_status = single_job_obj['single_tool_status']
@@ -296,10 +296,15 @@ def update_batch_system_run_results(logger,project_uuid,status_change,job_dict):
         tool_status = job_dict[job_name]
         job_id, job_doc = construct_job_doc(tool_status,job_name,job_id,status)
         job_info = job_doc.pop("jobInfo")
-        run_data_doc['jobData'][job_id] = job_info
+        job_run_data_id = str(project_uuid) + "_" + str(job_id)
+        job_run_data_doc = copy.deepcopy(run_data_doc)
+        job_run_data_doc['jobData'] = job_info
+        try:
+            update_mongo_document(logger,RUN_DATA_COLLECTION,job_run_data_id,job_run_data_doc)
+        except:
+            pass
         run_result_doc['batchSystemJobs'][job_id] = job_doc
     run_result_doc['timestamp']['lastUpdated'] = get_current_time()
-    update_mongo_document(logger,RUN_DATA_COLLECTION,project_uuid,run_data_doc)
     update_mongo_document(logger,RUN_RESULTS_COLLECTION,project_uuid,run_result_doc)
 
 def update_workflow_run_results(logger,project_uuid,workflow_jobs_dict):
@@ -487,6 +492,7 @@ def construct_run_data_doc(job_uuid,jobstore_uuid,pipeline_version,project_id):
         "pipelineJobStoreId":jobstore_uuid,
         "pipelineVersion": pipeline_version,
         "projectId": project_id,
+        "timestamp": get_current_time(),
         "jobData": {}
     }
     return run_data
@@ -1787,7 +1793,10 @@ class RoslinTrack():
             for single_file in files:
                 if single_file == "worker_log.txt":
                     worker_log_path = os.path.join(root,single_file)
-                    worker_info = self.read_worker_log(worker_log_path)
+                    try:
+                        worker_info = self.read_worker_log(worker_log_path)
+                    except:
+                        pass
 
     def check_for_finished_jobs(self):
         job_dict = self.jobs

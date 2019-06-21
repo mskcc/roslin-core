@@ -94,7 +94,7 @@ def handle_change_max_memory(work_dir,max_memory_str,max_cpu_str,input_yaml_path
 
 
 def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, work_dir, inputs_yaml, pipeline_settings, input_files_blob, requirements_dict,submission_requirements_dict,workflow_args):
-    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_data_doc, update_run_profile_doc, construct_run_data_doc, construct_run_profile_doc
+    from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_profile_doc, construct_run_profile_doc
     leader_args = get_leader_args()
     common_args = get_common_args()
     leader_args_dict = get_args_dict(leader_args)
@@ -213,11 +213,9 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     if not restart:
         project_doc = construct_project_doc(logger,pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, restart, workflow_results_path)
         run_results_doc = construct_run_results_doc(pipeline_name, pipeline_version, project_id, project_path, job_uuid, jobstore_uuid, work_dir, workflow_name, input_files_blob, user, current_time, cwltoil_log_path, log_path_stdout, log_path_stderr)
-        run_data_doc = construct_run_data_doc(job_uuid, jobstore_uuid, pipeline_version, project_id)
         run_profile_doc = construct_run_profile_doc(logger,job_uuid,pipeline_settings)
         update_project_doc(logger,job_uuid,project_doc)
         update_run_result_doc(logger,job_uuid,run_results_doc)
-        update_run_data_doc(logger,job_uuid,run_data_doc)
         update_latest_project(logger,job_uuid,project_id)
         update_run_profile_doc(logger,job_uuid,run_profile_doc)
         user_event_name = "submit"
