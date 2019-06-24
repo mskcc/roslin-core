@@ -553,7 +553,7 @@ def send_user_kill_signal(project_name, project_uuid, pipeline_name, pipeline_ve
     batch_system = user_submission_data["batch_system"]
     if current_user != submitted_user:
         error_message = str(current_user) + " cannot kill a job submitted by " + str(submitted_user)
-    if current_hostname != submitted_hostname:
+    if current_hostname != submitted_hostname and termination_graceful:
         error_message = "Cannot kill a job running on " + str(submitted_hostname) + " from " + str(current_hostname)
     if error_message:
         user_termination_json['error_message'] = error_message
