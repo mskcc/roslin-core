@@ -788,13 +788,14 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
     with open(settings_path,'r') as settings_file:
         for single_line in settings_file:
             if 'export' in single_line:
-                single_env = single_line.strip().split("=")[0][7:]
+                single_env = single_line.strip().split("=")[0].split('export')[1].strip()
                 pipeline_env_list.append(single_env)
     roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
     roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
     execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     for single_env in pipeline_env_list:
-        os.environ[single_env] = pipeline_settings[single_env]
+        if single_env not in os.environ:
+            os.environ[single_env] = pipeline_settings[single_env]
     return pipeline_settings
 
 def chunks(l, n):
