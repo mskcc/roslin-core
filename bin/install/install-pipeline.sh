@@ -11,7 +11,7 @@ USAGE: `basename $0` [options]
 
 OPTIONS:
 
-   -p	   Roslin Pipeline deployable package (.tgz file)
+   -p	   Roslin Pipeline deployable package (.tgz file or directory)
    -f      Overwrite the existing installation
    -h      Help
 
@@ -43,14 +43,19 @@ then
     exit 1
 fi
 
-pipeline_package_filename=`basename ${pipeline_package_path}`
+if [ ! -d pipeline_package_path ]
+then
+    pipeline_package_filename=`basename ${pipeline_package_path}`
 
-# temporary tgz extraction path
-install_temp_path=`mktemp -d`
+    # temporary tgz extraction path
+    install_temp_path=`mktemp -d`
 
-# extract
-echo "Extracting - this may take a while..."
-tar xzf ${pipeline_package_path} -C ${install_temp_path}
+    # extract
+    echo "Extracting - this may take a while..."
+    tar xzf ${pipeline_package_path} -C ${install_temp_path}
+else
+    install_temp_path=$pipeline_package_path
+fi
 
 # load the Roslin Pipeline settings.sh found in tgz
 source ${install_temp_path}/setup/config/settings.sh
@@ -102,6 +107,8 @@ mkdir -p ${ROSLIN_PIPELINE_OUTPUT_PATH}
 #--> permission
 
 # group should have read/write/execute permission
+chmod -R 775 ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}/settings.sh
+chmod -R 775 ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}/test-settings.sh
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/img
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/cwl
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/scripts
