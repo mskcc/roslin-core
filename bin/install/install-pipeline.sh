@@ -187,7 +187,9 @@ do
 done
 #<--
 
-# clean up
-rm -rf ${install_temp_path}
-
+if [ ! -d $pipeline_package_path ]
+then
+    # clean up
+    rm -rf ${install_temp_path}
+fi
 echo "DONE."
