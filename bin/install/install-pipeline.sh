@@ -43,7 +43,7 @@ then
     exit 1
 fi
 
-if [ ! -d pipeline_package_path ]
+if [ ! -d $pipeline_package_path ]
 then
     pipeline_package_filename=`basename ${pipeline_package_path}`
 
