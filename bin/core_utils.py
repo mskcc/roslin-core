@@ -115,16 +115,10 @@ def get_args_dict(requirements_list):
 
 def get_restart_args():
     requirements_list = [
-        ("store",str,"restart_job_uuid","--restart","project uuid for restart",True,False)
+        ("store",str,"project_id","--id","Project ID (e.g. Proj_5088_B)",True,False),
+        ("store",str,"restart_job_uuid","--restart","project uuid for restart",True,False),
+        ("store_true",bool,"foreground_mode","--foreground-mode","Runs the pipeline the the foreground",False,False)
     ]
-    restart_args = get_common_args()
-    restart_args.extend(get_submission_args())
-    for single_arg in restart_args:
-        if single_arg[2] != "inputs_yaml" and single_arg[2] != "workflow_name":
-            new_arg_list = list(single_arg)
-            new_arg_list[5] = False
-            new_arg = tuple(new_arg_list)
-            requirements_list.append(new_arg)
     return requirements_list
 
 
