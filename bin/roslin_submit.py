@@ -197,11 +197,8 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     leader_job_store = jobstore_uuid
     leader_job_store_path = "file:" +os.path.join(roslin_leader_tmp_path,leader_job_store)
     roslin_leader_command.append(leader_job_store_path)
-    log_path_stdout = None
-    log_path_stderr = None
-    if not foreground_mode:
-        log_path_stdout = os.path.join(log_folder,log_stdout)
-        log_path_stderr = os.path.join(log_folder,log_stderr)
+    log_path_stdout = os.path.join(log_folder,log_stdout)
+    log_path_stderr = os.path.join(log_folder,log_stderr)
     cwltoil_log_path = os.path.join(log_folder,'cwltoil.log')
     user = getpass.getuser()
     hostname = socket.gethostname()
@@ -245,6 +242,10 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
         error = command_output['error']
         if error != None:
             print_error(error)
+        with open(log_path_stdout) as log_stdout:
+            log_stdout.write(output)
+        with open(log_path_stderr) as log_stderr:
+            log_stderr.write(error)
         exit(exit_code)
     else:
         leader_process = run_command(roslin_leader_command,log_path_stdout,log_path_stderr,False,False)
