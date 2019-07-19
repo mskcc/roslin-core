@@ -67,7 +67,7 @@ do
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
-        d) debug_options="--logDebug --cleanWorkDir never" ;;
+        d) debug_options="--logDebug" ;;
         p) CMO_PROJECT_ID=$OPTARG ;;
         j) JOB_UUID=$OPTARG ;;
         *) usage; exit 1 ;;
@@ -149,7 +149,7 @@ case $batch_system in
         ;;
 
     lsf)
-        batch_sys_options="--batchSystem lsf --stats"
+        batch_sys_options="--batchSystem lsf"
         ;;
 
     mesos)
@@ -244,13 +244,16 @@ cwltoil \
     --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG \
     --no-container \
     --not-strict \
+    --clean onSuccess \
     --cleanWorkDir onSuccess \
     --disableCaching \
     --disableChaining \
     --realTimeLogging \
+    --rotatingLogging \
     --maxLogFileSize 0 \
-    --writeLogs	${output_directory}/log \
+    --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
+    --clusterStats ${output_directory}/log/cluster_stats.json \
     --workDir ${ROSLIN_PIPELINE_BIN_PATH}/tmp \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
     ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
