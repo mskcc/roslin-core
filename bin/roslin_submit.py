@@ -242,9 +242,9 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
         error = command_output['error']
         if error != None:
             print_error(error)
-        with open(log_path_stdout) as log_stdout:
+        with open(log_path_stdout,"w") as log_stdout:
             log_stdout.write(output)
-        with open(log_path_stderr) as log_stderr:
+        with open(log_path_stderr,"w") as log_stderr:
             log_stderr.write(error)
         exit(exit_code)
     else:
