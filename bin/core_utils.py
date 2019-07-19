@@ -174,6 +174,7 @@ def parse_workflow_args(params,requirements_list):
         workflow_param_key = parser_dest
         if workflow_param_key in params_dict:
             workflow_param_value = params_dict[workflow_param_key]
+            requirements_value = None
             if is_path:
                 if workflow_param_value:
                     requirements_value = None
