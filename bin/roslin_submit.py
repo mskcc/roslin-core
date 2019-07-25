@@ -283,7 +283,7 @@ def targzip_project_files(project_id, project_path):
             if single_file_size < MAX_META_FILE_SIZE:
                 tar.add(single_file_path, arcname=single_file_name)
                 file_obj = {"path": single_file_path,"checksum": single_file_sha1, "name":single_file_name}
-            input_file_objs.append(file_obj)
+                input_file_objs.append(file_obj)
     tar.close()
 
     tgz_blob = None
