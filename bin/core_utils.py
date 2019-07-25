@@ -57,6 +57,8 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
                             print(single_output_line)
                         output = output + "\n" + single_output_line
                         if exiting_log_message in single_output_line or finished_log_message in single_output_line:
+                            process_pid = single_process.pid
+                            os.kill(process_pid,signal.SIGTERM)
                             single_process.stdout.close()
                             errorcode = single_process.wait()
                             return {"output":output,"error":error,"errorcode":errorcode}
@@ -269,7 +271,7 @@ def kill_all_lsf_jobs(logger, uuid):
     kill_process_dict = run_command(lsf_kill_command,None,None,False,True)
     output = kill_process_dict['output']
     error = kill_process_dict['error']
-    if "No unfinished job found"  not in error:
+    if "No unfinished job found" not in error:
         if output:
             list_of_jobs_to_kill = output.split('\n')
             for single_job in list_of_jobs_to_kill:
@@ -309,7 +311,7 @@ def kill_project(project_name, project_uuid, work_dir, batch_system, user_termin
     if project_pid:
         if termination_graceful:
             try:
-                os.kill(int(project_pid), signal.SIGINT)
+                os.kill(int(project_pid), signal.SIGTERM)
             except OSError:
                 print_error("Could not find pid "+str(project_pid)+ " . Project might have already exited")
         else:

@@ -35,6 +35,7 @@ def cleanup(clean_up_dict, signal_num, frame):
         error_message = "Cleanup failed\n"+str(traceback.format_exc())
         log(logger,'error',error_message)
     finally:
+        log(logger,'info',exiting_log_message)
         exit(1)
 
 def cleanup_helper(clean_up_dict, signal_num, frame):
@@ -173,12 +174,12 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     job_status = {}
     while track_leader.is_set():
         if toil_obj._batchSystem:
-            log_dir = os.path.join(work_dir,'log')
+            log_dir, work_dir, tmp_dir  = get_dir_paths(workflow_params['project_id'], workflow_params['job_uuid'], workflow_params['pipeline_name'], workflow_params['pipeline_version'])
             dir_paths = (log_dir,work_dir,tmp_dir)
             user_kill_signal = check_user_kill_signal(project_id, job_uuid, pipeline_name, pipeline_version, dir_paths)
             if user_kill_signal:
                 clean_up_dict['user_kill_signal'] = user_kill_signal
-                if 'error_message' in clean_up_dict and clean_up_dict['error_message'] != None:
+                if 'error_message' in clean_up_dict['user_kill_signal'] and clean_up_dict['user_kill_signal']['error_message'] != None:
                     cleanup(clean_up_dict,None,None)
             new_job_status = roslin_track.check_status_change(job_status,track_leader)
             if new_job_status:
