@@ -17,8 +17,6 @@ fi
 pipeline_name_version=${ROSLIN_DEFAULT_PIPELINE_NAME_VERSION}
 debug_options=""
 restart_options=""
-mem_options=""
-cores_options=""
 restart_jobstore_id=""
 batch_system=""
 output_directory="./outputs"
@@ -36,27 +34,27 @@ OPTIONS:
    -v      Pipeline name/version (default=${pipeline_name_version})
    -w      Workflow filename (*.cwl)
    -i      Input filename (*.yaml)
-   -b      Batch system (e.g. "singleMachine", "lsf", "mesos")
+   -b      Batch system ("singleMachine", "lsf", "mesos")
    -o      Output directory (default=${output_directory})
-   -j      Jobstore UUID
-   -u      Job UUID
-   -k      Toil work directory location
-   -m      Max Mem (e.g. 256G)
-   -c      Max Cores (e.g. 14)
    -r      Restart the workflow with the given job store UUID
-   -t      Run pipeline in test mode
    -z      Show list of supported workflows
-   -d      Enable debugging
+   -d      Enable debugging (default="enabled")
+           fixme: you are not allowed to disable this right now
+
+OPTIONS for MSKCC LSF+TOIL:
+
+   -p      CMO Project ID (e.g. Proj_5088_B)
+   -j      Pre-generated job UUID
 
 EXAMPLE:
 
-   `basename $0` -v variant/2.5.0 -w module-1.cwl -i inputs.yaml -k /scratch -j [uuid1] -u [uuid2] -b lsf
-   `basename $0` -v rna-seq/1.0.0 -w hisat2.cwl -i inputs.yaml -k /scratch -j [uuid1] -u [uuid2] -b singleMachine
+   `basename $0` -v variant/1.0.0 -w module-1.cwl -i inputs.yaml -b lsf
+   `basename $0` -v rna-seq/1.0.0 -w tophat.cwl -i inputs.yaml -b singleMachine
 
 EOF
 }
 
-while getopts “v:w:i:b:o:j:k:m:c:rtzd:u:” OPTION
+while getopts “v:w:i:b:o:r:zdp:j:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
@@ -64,18 +62,14 @@ do
         i) input_filename=$OPTARG ;;
         b) batch_system=$OPTARG ;;
         o) output_directory=$OPTARG ;;
-        j) JOBSTORE_ID=$OPTARG ;;
-        k) work_dir=$OPTARG ;;
-        m) max_mem=$OPTARG ;;
-        c) max_cores=$OPTARG ;;
-        r) restart_options="--restart" ;;
-        t) test_mode="True" ;;
-        z) cd ${ROSLIN_PIPELINE_CWL_PATH}
+        r) restart_jobstore_id=$OPTARG; restart_options="--restart" ;;
+       	z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
-        d) debug_options="--logDebug --cleanWorkDir never" ;;
-        u) JOB_UUID=$OPTARG ;;
+        d) debug_options="--logDebug" ;;
+        p) CMO_PROJECT_ID=$OPTARG ;;
+        j) JOB_UUID=$OPTARG ;;
         *) usage; exit 1 ;;
     esac
 done
@@ -93,26 +87,8 @@ then
     exit 1
 fi
 
-pipeline_cwl_path=${ROSLIN_PIPELINE_CWL_PATH}
 # load pipeline settings
 source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
-
-if [ ! -z $test_mode ]
-then
-    echo "Running in test mode"
-    source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/test-settings.sh
-
-fi
-
-if [ ! -z $max_mem ]
-then
-  mem_options="--maxMemory $max_mem"
-fi
-
-if [ ! -z $max_cores ]
-then
-  cores_options="--maxCores $max_cores"
-fi
 
 if [ -z "$ROSLIN_PIPELINE_BIN_PATH" ] || [ -z "$ROSLIN_PIPELINE_DATA_PATH" ] || \
    [ -z "$ROSLIN_PIPELINE_WORKSPACE_PATH" ] || [ -z "$ROSLIN_PIPELINE_OUTPUT_PATH" ] || \
@@ -130,6 +106,21 @@ then
     echo "ROSLIN_CMO_INSTALL_PATH=${ROSLIN_CMO_INSTALL_PATH}"
     echo "ROSLIN_TOIL_INSTALL_PATH=${ROSLIN_TOIL_INSTALL_PATH}"
     exit 1
+fi
+
+# check Singularity existstence only if you're not on leader nodes
+# fixme: this is so MSKCC-specific
+leader_node=(luna selene)
+case "${leader_node[@]}" in  *"`hostname -s`"*) leader_node='yes' ;; esac
+
+if [ "$leader_node" != 'yes' ]
+then
+    if [ ! -x "`command -v $ROSLIN_SINGULARITY_PATH`" ]
+    then
+        echo "Unable to find Singularity."
+        echo "ROSLIN_SINGULARITY_PATH=${ROSLIN_SINGULARITY_PATH}"
+        exit 1
+    fi
 fi
 
 if [ ! -d $ROSLIN_CMO_PYTHON_PATH ]
@@ -151,16 +142,41 @@ then
 fi
 
 # handle batch system options
-batch_sys_options="--batchSystem ${batch_system}"
+case $batch_system in
+
+    singleMachine)
+        batch_sys_options="--batchSystem singleMachine"
+        ;;
+
+    lsf)
+        batch_sys_options="--batchSystem lsf"
+        ;;
+
+    mesos)
+        echo "Unsupported right now."
+        exit 1
+        ;;
+
+    *)
+        usage
+        exit 1
+        ;;
+esac
+
 
 # get absolute path for output directory
 output_directory=`python -c "import os;print(os.path.abspath('${output_directory}'))"`
 
+# check if output directory already exists
+if [ -d ${output_directory} ]
+then
+    echo "The specified output directory already exists: ${output_directory}"
+    echo "Aborted."
+    exit 1
+fi
+
 # create output directory
 mkdir -p ${output_directory}
-
-# create work directory
-mkdir -p ${work_dir}
 
 # create log directory (under output)
 mkdir -p ${output_directory}/log
@@ -177,18 +193,24 @@ else
     job_uuid=${JOB_UUID}
 fi
 
-if [ -z "${JOBSTORE_ID}" ]
+if [ -z "${CMO_PROJECT_ID}" ]
 then
-    # create a new UUID for job
-    job_store_uuid=`python -c 'import uuid; print str(uuid.uuid1())'`
+    cmo_project_id="default"
 else
-    # use the supplied one
-    job_store_uuid=${JOBSTORE_ID}
+    cmo_project_id="${CMO_PROJECT_ID}"
 fi
 
-# LSF+TOIL
-export TOIL_LSF_ARGS="${TOIL_LSF_ARGS} -P ${job_uuid}"
-job_store_uuid=${JOBSTORE_ID}
+# MSKCC LSF+TOIL
+export TOIL_LSF_PROJECT="${cmo_project_id}:${job_uuid}"
+
+if [ -z "$restart_jobstore_id" ]
+then
+    # create a new UUID for job store
+    job_store_uuid=`python -c 'import uuid; print str(uuid.uuid1())'`
+else
+    # we're doing a restart - use the supplied jobstore uuid
+    job_store_uuid=${restart_jobstore_id}
+fi
 
 # save job uuid
 echo "${job_uuid}" > ${output_directory}/job-uuid
@@ -199,13 +221,14 @@ echo "${job_store_uuid}" > ${output_directory}/job-store-uuid
 # save the Roslin Pipeline settings.sh
 cp ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh ${output_directory}/settings
 
-jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/${job_store_uuid}"
-echo "${jobstore_path}"
+jobstore_path="${ROSLIN_PIPELINE_BIN_PATH}/tmp/jobstore-${job_store_uuid}"
 
 # job uuid followed by a colon (:) and then job store uuid
 printf "\n---> ROSLIN JOB UUID = ${job_uuid}:${job_store_uuid}\n"
 
 echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAME}-${ROSLIN_PIPELINE_VERSION}, cmo-${ROSLIN_CMO_VERSION}"
+# Load the virtualenv
+source $ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/activate
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
@@ -214,23 +237,26 @@ set -o pipefail
 cwltoil \
     ${restart_options} \
     --jobStore file://${jobstore_path} \
+    --defaultDisk 24G \
+    --defaultMemory 48G \
+    --defaultCores 1 \
     --retryCount 1 \
-    ${mem_options} \
-    ${cores_options} \
-    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH SINGULARITY_BIND ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR ROSLIN_USE_DOCKER DOCKER_REGISTRY_NAME DOCKER_BIND ROSLIN_PIPELINE_CWL_PATH \
+    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG \
     --no-container \
     --not-strict \
+    --clean onSuccess \
+    --cleanWorkDir onSuccess \
     --disableCaching \
     --disableChaining \
     --realTimeLogging \
-    --stats \
+    --rotatingLogging \
     --maxLogFileSize 0 \
-    --writeLogs ${output_directory}/log \
+    --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
-    --tmpdir-prefix ${work_dir} \
-    --workDir ${work_dir} \
+    --clusterStats ${output_directory}/log/cluster_stats.json \
+    --workDir ${ROSLIN_PIPELINE_BIN_PATH}/tmp \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
-    ${pipeline_cwl_path}/${workflow_filename} \
+    ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
     ${input_filename} \
     | tee ${output_directory}/output-meta.json
 exit_code=$?
