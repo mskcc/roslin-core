@@ -732,18 +732,19 @@ def copy_ignore_same_file(first_file,second_file):
             return
     shutil.copyfile(first_file,second_file)
 
-def read_pipeline_settings(pipeline_name, pipeline_version):
+
+def read_settings(pipeline_name,pipeline_version,settings_file_name):
     "read the Roslin Pipeline settings"
 
     pipeline_name_version = os.path.join(pipeline_name,pipeline_version)
-    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "settings.sh")
+    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, settings_file_name)
 
     if not os.path.exists(settings_path):
         return None
 
-    command = ['bash', '-c', 'source {} && env'.format(settings_path)]
+    command = 'source {} && env'.format(settings_path)
 
-    proc = Popen(command, stdout=PIPE)
+    proc = Popen(command, stdout=PIPE,shell=True)
 
     source_env = {}
 
@@ -754,29 +755,13 @@ def read_pipeline_settings(pipeline_name, pipeline_version):
     proc.communicate()
 
     return source_env
+
+
+def read_pipeline_settings(pipeline_name, pipeline_version):
+    return read_settings(pipeline_name,pipeline_version,'settings.sh')
 
 def read_test_settings(pipeline_name, pipeline_version):
-    "read the Roslin Pipeline settings"
-
-    pipeline_name_version = os.path.join(pipeline_name,pipeline_version)
-    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "test-settings.sh")
-
-    if not os.path.exists(settings_path):
-        return None
-
-    command = ['bash', '-c', 'source {} && env'.format(settings_path)]
-
-    proc = Popen(command, stdout=PIPE)
-
-    source_env = {}
-
-    for line in proc.stdout:
-        (key, _, value) = line.partition("=")
-        source_env[key] = value.rstrip()
-
-    proc.communicate()
-
-    return source_env
+    return read_settings(pipeline_name,pipeline_version,'test-settings.sh')
 
 def load_pipeline_settings(pipeline_name, pipeline_version):
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
@@ -792,9 +777,10 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
                 if '&&' in single_line and single_env in os.environ:
                     continue
                 pipeline_env_list.append(single_env)
-    roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
-    roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
-    execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
+    if 'ROSLIN_PIPELINE_RESOURCE_PATH' in pipeline_settings:
+        roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
+        roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
+        execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     for single_env in pipeline_env_list:
         os.environ[single_env] = pipeline_settings[single_env]
     return pipeline_settings
