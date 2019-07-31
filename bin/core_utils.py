@@ -58,7 +58,10 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
                         output = output + "\n" + single_output_line
                         if exiting_log_message in single_output_line or finished_log_message in single_output_line:
                             process_pid = single_process.pid
-                            os.kill(process_pid,signal.SIGTERM)
+                            try:
+                                os.kill(process_pid,signal.SIGTERM)
+                            except:
+                                pass
                             single_process.stdout.close()
                             errorcode = single_process.wait()
                             return {"output":output,"error":error,"errorcode":errorcode}
