@@ -783,7 +783,8 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
         roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
         execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     for single_env in pipeline_env_list:
-        os.environ[single_env] = pipeline_settings[single_env]
+        if single_env in pipeline_settings:
+            os.environ[single_env] = pipeline_settings[single_env]
     return pipeline_settings
 
 def chunks(l, n):
