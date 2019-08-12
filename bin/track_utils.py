@@ -805,7 +805,7 @@ class RoslinWorkflow(object):
                     log(logger,"info",info_message)
                     shutil.rmtree(results_path)
             if not os.path.exists(results_path):
-                os.mkdir(results_path)
+                os.makedirs(results_path)
             log_file = ROSLIN_COPY_OUTPUTS_LOG
             log_file_path = os.path.join(log_folder,log_file)
             if os.path.exists(log_file_path):

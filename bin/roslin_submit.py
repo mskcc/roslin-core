@@ -123,7 +123,7 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     max_mem = submission_requirements_dict['max_mem']
     foreground_mode = submission_requirements_dict['foreground_mode']
     if results_dir:
-        workflow_results_folder = project_id+"."+job_uuid
+        workflow_results_folder = os.path.join(project_id,job_uuid)
         workflow_results_path = os.path.join(results_dir,workflow_results_folder)
         if not os.access(results_dir, os.W_OK):
             print_error("ERROR: Can not write to " + str(results_dir))
