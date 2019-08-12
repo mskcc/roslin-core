@@ -78,7 +78,9 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
         clean_workflow.set()
         project_killed_message = ""
         project_killed_event = {}
-        log_dir, work_dir, tmp_dir  = get_dir_paths(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'])
+        log_dir = workflow_params['log_folder']
+        work_dir = workflow_params['project_work_dir']
+        tmp_dir = workflow_params['tmp_dir']
         dir_paths = (log_dir,work_dir,tmp_dir)
         user_kill_signal = check_user_kill_signal(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'], dir_paths=dir_paths)
         if user_kill_signal and 'user_kill_signal' not in clean_up_dict:
@@ -198,7 +200,9 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     job_status = {}
     while track_leader.is_set():
         if toil_obj._batchSystem:
-            log_dir, work_dir, tmp_dir  = get_dir_paths(workflow_params['project_id'], workflow_params['job_uuid'], workflow_params['pipeline_name'], workflow_params['pipeline_version'])
+            log_dir = workflow_params['log_folder']
+            work_dir = workflow_params['project_work_dir']
+            tmp_dir = workflow_params['tmp_dir']
             dir_paths = (log_dir,work_dir,tmp_dir)
             user_kill_signal = check_user_kill_signal(project_id, job_uuid, pipeline_name, pipeline_version, dir_paths)
             if user_kill_signal:
