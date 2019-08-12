@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import logging
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
 from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists, check_tmp_env, load_yaml, get_common_args, get_leader_args, parse_workflow_args, add_specific_args, get_dir_paths
@@ -10,7 +11,6 @@ from toil.batchSystems import registry
 from threading import Thread, Event
 import time
 import os
-import logging
 import json
 import traceback
 import sys
@@ -44,7 +44,7 @@ def cleanup_tmp_files(workflow_params):
     tmp_dir_list = os.listdir(tmp_dir_path)
     job_store_dir = workflow_params['tmp_dir']
     job_store_name = workflow_params['jobstore'] + '-' + workflow_params['workflow_name']
-    job_store_path = os.path.join(job_store_dir)
+    job_store_path = os.path.join(job_store_dir,job_store_name)
     if os.path.exists(job_store_path):
         try:
             shutil.rmtree(job_store_path)
@@ -52,7 +52,7 @@ def cleanup_tmp_files(workflow_params):
             error_message = "Cleanup failed for: " + str(job_store_path) +"\n"+str(traceback.format_exc())
             log(logger,'error',error_message)
     for single_folder in tmp_dir_list:
-        single_folder_path = os.path.join(tmp_dir,single_folder)
+        single_folder_path = os.path.join(tmp_dir_path,single_folder)
         if os.path.isdir(single_folder_path):
             try:
                 shutil.rmtree(single_folder_path)
