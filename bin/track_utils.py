@@ -964,6 +964,9 @@ class RoslinWorkflow(object):
         save_yaml(yaml_location,roslin_yaml)
         return 0
 
+    def modify_test_files(self,test_dir):
+        pass
+
     def run_cwl(self,params,job_params):
         logger = dill.loads(params['logger'])
         project_id = params['project_id']
