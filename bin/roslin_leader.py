@@ -17,6 +17,7 @@ import sys
 import signal
 import copy
 import argparse
+import shutil
 from functools import partial
 from ruamel.yaml import safe_load
 
@@ -37,6 +38,27 @@ def cleanup(clean_up_dict, signal_num, frame):
     finally:
         log(logger,'info',exiting_log_message)
         exit(1)
+
+def cleanup_tmp_files(workflow_params):
+    tmp_dir_path = workflow_params['work_dir']
+    tmp_dir_list = os.listdir(tmp_dir_path)
+    job_store_dir = workflow_params['tmp_dir']
+    job_store_name = workflow_params['jobstore'] + '-' + workflow_params['workflow_name']
+    job_store_path = os.path.join(job_store_dir)
+    if os.path.exists(job_store_path):
+        try:
+            shutil.rmtree(job_store_path)
+        except:
+            error_message = "Cleanup failed for: " + str(job_store_path) +"\n"+str(traceback.format_exc())
+            log(logger,'error',error_message)
+    for single_folder in tmp_dir_list:
+        single_folder_path = os.path.join(tmp_dir,single_folder)
+        if os.path.isdir(single_folder_path):
+            try:
+                shutil.rmtree(single_folder_path)
+            except:
+                error_message = "Cleanup failed for: " + str(single_folder_path) +"\n"+str(traceback.format_exc())
+                log(logger,'error',error_message)
 
 def cleanup_helper(clean_up_dict, signal_num, frame):
     clean_workflow = clean_up_dict['clean_workflow']
@@ -138,6 +160,8 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
         log(logger,'info',done_message)
         roslin_workflow.on_success(logger)
         roslin_workflow.on_complete(logger)
+        log(logger,'info',"Cleaning up tmp files")
+        cleanup_tmp_files(roslin_workflow.params)
         log_workflow_output(logger,roslin_workflow,job_uuid)
         log(logger,'info',finished_log_message)
     if status == exit_status:

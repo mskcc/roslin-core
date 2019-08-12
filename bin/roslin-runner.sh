@@ -225,7 +225,7 @@ cwltoil \
     --realTimeLogging \
     --stats \
     --maxLogFileSize 0 \
-    --writeLogs ${output_directory}/log \
+    --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
     --tmpdir-prefix ${work_dir} \
     --workDir ${work_dir} \
