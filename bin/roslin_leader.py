@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import logging
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
 from core_utils import read_pipeline_settings, kill_all_lsf_jobs, check_user_kill_signal, starting_log_message, exiting_log_message, finished_log_message, check_if_argument_file_exists, check_tmp_env, load_yaml, get_common_args, get_leader_args, parse_workflow_args, add_specific_args, get_dir_paths
@@ -10,13 +11,13 @@ from toil.batchSystems import registry
 from threading import Thread, Event
 import time
 import os
-import logging
 import json
 import traceback
 import sys
 import signal
 import copy
 import argparse
+import shutil
 from functools import partial
 from ruamel.yaml import safe_load
 
@@ -38,6 +39,27 @@ def cleanup(clean_up_dict, signal_num, frame):
         log(logger,'info',exiting_log_message)
         exit(1)
 
+def cleanup_tmp_files(workflow_params):
+    tmp_dir_path = workflow_params['work_dir']
+    tmp_dir_list = os.listdir(tmp_dir_path)
+    job_store_dir = workflow_params['tmp_dir']
+    job_store_name = workflow_params['jobstore'] + '-' + workflow_params['workflow_name']
+    job_store_path = os.path.join(job_store_dir,job_store_name)
+    if os.path.exists(job_store_path):
+        try:
+            shutil.rmtree(job_store_path)
+        except:
+            error_message = "Cleanup failed for: " + str(job_store_path) +"\n"+str(traceback.format_exc())
+            log(logger,'error',error_message)
+    for single_folder in tmp_dir_list:
+        single_folder_path = os.path.join(tmp_dir_path,single_folder)
+        if os.path.isdir(single_folder_path):
+            try:
+                shutil.rmtree(single_folder_path)
+            except:
+                error_message = "Cleanup failed for: " + str(single_folder_path) +"\n"+str(traceback.format_exc())
+                log(logger,'error',error_message)
+
 def cleanup_helper(clean_up_dict, signal_num, frame):
     clean_workflow = clean_up_dict['clean_workflow']
     toil_obj = clean_up_dict['toil_obj']
@@ -56,7 +78,9 @@ def cleanup_helper(clean_up_dict, signal_num, frame):
         clean_workflow.set()
         project_killed_message = ""
         project_killed_event = {}
-        log_dir, work_dir, tmp_dir  = get_dir_paths(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'])
+        log_dir = workflow_params['log_folder']
+        work_dir = workflow_params['project_work_dir']
+        tmp_dir = workflow_params['tmp_dir']
         dir_paths = (log_dir,work_dir,tmp_dir)
         user_kill_signal = check_user_kill_signal(workflow.params['project_id'], workflow.params['job_uuid'], workflow.params['pipeline_name'], workflow.params['pipeline_version'], dir_paths=dir_paths)
         if user_kill_signal and 'user_kill_signal' not in clean_up_dict:
@@ -138,6 +162,8 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
         log(logger,'info',done_message)
         roslin_workflow.on_success(logger)
         roslin_workflow.on_complete(logger)
+        log(logger,'info',"Cleaning up tmp files")
+        cleanup_tmp_files(roslin_workflow.params)
         log_workflow_output(logger,roslin_workflow,job_uuid)
         log(logger,'info',finished_log_message)
     if status == exit_status:
@@ -174,7 +200,9 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
     job_status = {}
     while track_leader.is_set():
         if toil_obj._batchSystem:
-            log_dir, work_dir, tmp_dir  = get_dir_paths(workflow_params['project_id'], workflow_params['job_uuid'], workflow_params['pipeline_name'], workflow_params['pipeline_version'])
+            log_dir = workflow_params['log_folder']
+            work_dir = workflow_params['project_work_dir']
+            tmp_dir = workflow_params['tmp_dir']
             dir_paths = (log_dir,work_dir,tmp_dir)
             user_kill_signal = check_user_kill_signal(project_id, job_uuid, pipeline_name, pipeline_version, dir_paths)
             if user_kill_signal:

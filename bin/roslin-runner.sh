@@ -218,14 +218,14 @@ cwltoil \
     ${mem_options} \
     ${cores_options} \
     --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH SINGULARITY_BIND ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR ROSLIN_USE_DOCKER DOCKER_REGISTRY_NAME DOCKER_BIND ROSLIN_PIPELINE_CWL_PATH \
-    --no-container \
+    --singularity \
     --not-strict \
     --disableCaching \
     --disableChaining \
     --realTimeLogging \
     --stats \
     --maxLogFileSize 0 \
-    --writeLogs ${output_directory}/log \
+    --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
     --tmpdir-prefix ${work_dir} \
     --workDir ${work_dir} \

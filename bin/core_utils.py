@@ -465,6 +465,7 @@ def create_mpgr(pipeline_name,pipeline_version,workflow,batch_system,mpgr_output
     from jinja2 import Template
     pipeline_settings = read_pipeline_settings(pipeline_name, pipeline_version)
     sys.path.append(pipeline_settings['ROSLIN_PIPELINE_BIN_PATH'])
+    import roslin_workflows
     dependency_file_list = []
     if not dependency_path:
         dependency_path = os.path.join(pipeline_settings['ROSLIN_PIPELINE_WORKSPACE_PATH'],'test_data')
@@ -501,6 +502,9 @@ def create_mpgr(pipeline_name,pipeline_version,workflow,batch_system,mpgr_output
             os.chmod(template_output_path,0777)
         else:
             copy_ignore_same_file(single_template_path,template_output_path)
+    roslin_workflow_class = getattr(roslin_workflows,workflow)
+    roslin_workflow = roslin_workflow_class(None)
+    roslin_workflow.modify_test_files(mpgr_output_path)
     return dependency_file_list
 
 
@@ -783,7 +787,8 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
         roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
         execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     for single_env in pipeline_env_list:
-        os.environ[single_env] = pipeline_settings[single_env]
+        if single_env in pipeline_settings:
+            os.environ[single_env] = pipeline_settings[single_env]
     return pipeline_settings
 
 def chunks(l, n):

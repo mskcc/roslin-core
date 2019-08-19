@@ -805,7 +805,7 @@ class RoslinWorkflow(object):
                     log(logger,"info",info_message)
                     shutil.rmtree(results_path)
             if not os.path.exists(results_path):
-                os.mkdir(results_path)
+                os.makedirs(results_path)
             log_file = ROSLIN_COPY_OUTPUTS_LOG
             log_file_path = os.path.join(log_folder,log_file)
             if os.path.exists(log_file_path):
@@ -963,6 +963,9 @@ class RoslinWorkflow(object):
         roslin_yaml = self.modify_dependency_inputs(roslin_yaml,job_params)
         save_yaml(yaml_location,roslin_yaml)
         return 0
+
+    def modify_test_files(self,test_dir):
+        pass
 
     def run_cwl(self,params,job_params):
         logger = dill.loads(params['logger'])
