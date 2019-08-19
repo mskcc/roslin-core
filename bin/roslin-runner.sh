@@ -209,6 +209,9 @@ echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAM
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
+export TMP="${work_dir}"
+export TMPDIR="${work_dir}"
+export SINGULARITY_CACHEDIR="${ROSLIN_PIPELINE_BIN_PATH}/img"
 # run cwltoil
 set -o pipefail
 cwltoil \
@@ -228,6 +231,7 @@ cwltoil \
     --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
     --tmpdir-prefix ${work_dir} \
+    --tmp-outdir-prefix ${work_dir} \
     --workDir ${work_dir} \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
     ${pipeline_cwl_path}/${workflow_filename} \
