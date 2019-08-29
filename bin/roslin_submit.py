@@ -190,6 +190,8 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
                     if requirement_value == True:
                         roslin_leader_command.extend([requirement_option])
                 else:
+                    if single_requirement_key == 'inputs_yaml':
+                        requirement_value = inputs_yaml
                     roslin_leader_command.extend([requirement_option,requirement_value])
     if restart:
         roslin_leader_command.append('--restart')
