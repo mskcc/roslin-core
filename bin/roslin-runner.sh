@@ -227,7 +227,6 @@ cwltoil \
     --disableChaining \
     --realTimeLogging \
     --stats \
-    --linkImports \
     --maxLogFileSize 0 \
     --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
