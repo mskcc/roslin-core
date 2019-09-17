@@ -11,7 +11,7 @@ USAGE: `basename $0` [options]
 
 OPTIONS:
 
-   -p	   Roslin Pipeline deployable package (.tgz file)
+   -p	   Roslin Pipeline deployable package (.tgz file or directory)
    -f      Overwrite the existing installation
    -h      Help
 
@@ -43,14 +43,19 @@ then
     exit 1
 fi
 
-pipeline_package_filename=`basename ${pipeline_package_path}`
+if [ ! -d $pipeline_package_path ]
+then
+    pipeline_package_filename=`basename ${pipeline_package_path}`
 
-# temporary tgz extraction path
-install_temp_path=`mktemp -d`
+    # temporary tgz extraction path
+    install_temp_path=`mktemp -d`
 
-# extract
-echo "Extracting - this may take a while..."
-tar xzf ${pipeline_package_path} -C ${install_temp_path}
+    # extract
+    echo "Extracting - this may take a while..."
+    tar xzf ${pipeline_package_path} -C ${install_temp_path}
+else
+    install_temp_path=$pipeline_package_path
+fi
 
 # load the Roslin Pipeline settings.sh found in tgz
 source ${install_temp_path}/setup/config/settings.sh
@@ -102,6 +107,8 @@ mkdir -p ${ROSLIN_PIPELINE_OUTPUT_PATH}
 #--> permission
 
 # group should have read/write/execute permission
+chmod -R 775 ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}/settings.sh
+chmod -R 775 ${ROSLIN_CORE_CONFIG_PATH}/${ROSLIN_PIPELINE_NAME}/${ROSLIN_PIPELINE_VERSION}/test-settings.sh
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/img
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/cwl
 chmod -R 775 ${ROSLIN_PIPELINE_BIN_PATH}/scripts
@@ -118,7 +125,7 @@ cp -R ${install_temp_path}/setup/img/* ${ROSLIN_PIPELINE_BIN_PATH}/img/
 
 # check md5 checksum
 cd ${ROSLIN_PIPELINE_BIN_PATH}/img
-md5sum -c checksum.dat
+find . -name "*.sif" -type f | xargs md5sum > checksum.dat
 
 # copy cwl wrappers
 cp -R ${install_temp_path}/setup/cwl/* ${ROSLIN_PIPELINE_BIN_PATH}/cwl/
@@ -129,7 +136,7 @@ cp -R ${install_temp_path}/setup/bin/* ${ROSLIN_PIPELINE_BIN_PATH}/scripts/
 
 # check md5 checksum
 cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
-md5sum -c checksum.dat
+find . -name "*.cwl" -type f | xargs md5sum > checksum.dat
 
 #--> use pre-fetched local schemas instead of going over the Internet to fetch
 for file in `find ${ROSLIN_PIPELINE_BIN_PATH}/cwl -name "*.cwl"`
@@ -161,7 +168,7 @@ do
         > ${file}
 
     # get the number of line differences
-    diff_count=`diff -y --suppress-common-lines ${file} ${file}.bak | grep '^' | wc -l`
+    diff_count=`diff -y --ignore-space-change --suppress-common-lines ${file} ${file}.bak | grep '^' | wc -l`
 
     # the number of line differences must be either
     # 3: we replaced three lines
@@ -169,6 +176,8 @@ do
     if [ $diff_count -ne 0 ] && [ $diff_count -ne 3 ]
     then
         echo $diff_count
+        echo `diff -y --ignore-space-change --suppress-common-lines ${file} ${file}.bak | grep '^'`
+        echo $file
         echo "Something is not right! Aborted!"
         exit 1
     fi
@@ -178,10 +187,9 @@ do
 done
 #<--
 
-# copy jumpstart examples
-tar cvzf ${ROSLIN_PIPELINE_WORKSPACE_PATH}/examples.tgz -C ${install_temp_path}/setup ./examples
-
-# clean up
-rm -rf ${install_temp_path}
-
+if [ ! -d $pipeline_package_path ]
+then
+    # clean up
+    rm -rf ${install_temp_path}
+fi
 echo "DONE."

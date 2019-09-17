@@ -28,23 +28,9 @@ Example:   sing.sh samtools 1.3.1 view sample.bam
 EOF
 }
 
-# set up singularity bind paths
-bind_path=""
-for single_bind_path in ${ROSLIN_BIND_PATH}
-do
-  bind_path="${bind_path} --bind ${single_bind_path}:${single_bind_path}"
-done
-
 # path to container images
 container_image_path="${ROSLIN_PIPELINE_BIN_PATH}/img"
-
-while getopts “i” OPTION
-do
-    case $OPTION in
-        i) inspect="set" ;;
-    esac
-done
-
+DOCKER_REPO_TOOLNAME_PREFIX="roslin-variant"
 tool_name=${@:$OPTIND:1}
 tool_version=${@:$OPTIND+1:1}
 
@@ -56,18 +42,23 @@ fi
 shift
 shift
 
-# output metadata (labels) if the inspect option (-i) is supplied
-if [ "$inspect" = "set" ]
-then
-${ROSLIN_SINGULARITY_PATH} exec \
-    --cleanenv \
-    ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif \
-    cat /.roslin/labels.json
-  exit $?
-fi
+tool_info="${tool_name}:${tool_version}"
 
+if [ -n "$ROSLIN_USE_DOCKER" ]
+then
+  if [ -n "$DOCKER_REGISTRY_NAME" ]
+  then
+      docker_image_registry="${DOCKER_REGISTRY_NAME}/${DOCKER_REPO_TOOLNAME_PREFIX}-${tool_info}"
+      docker_image_registry_url="docker://${docker_image_registry}"
+      docker pull docker_image_registry_url
+      docker tag ${docker_image_registry} ${tool_info}
+  fi
+
+docker run -i -w $(pwd) $(echo $DOCKER_BIND) ${tool_info} $@
+else
 # start a singularity container with an empty environment
-${ROSLIN_SINGULARITY_PATH} run \
+# use /usr/bin/runscript.sh
+${ROSLIN_SINGULARITY_PATH} exec \
   --cleanenv \
-  ${bind_path} \
-  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif $*
+  ${container_image_path}/${tool_name}/${tool_version}/${tool_name}.sif /usr/bin/runscript.sh $@
+fi

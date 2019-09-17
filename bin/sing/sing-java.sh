@@ -38,33 +38,7 @@ done
 tool_name=${sing_opts[1]}
 tool_version=${sing_opts[2]}
 tool_opts=`echo ${sing_opts[*]} | cut -d' ' -f4-`
-
-# override $tool_name and/or $tool_opts 
-case $tool_name in
-
-    picard)
-        case $tool_version in
-            1.96)
-                tool_name="/usr/bin/picard-tools/${sing_opts[3]}.jar" ;;
-            *)
-                tool_name="/usr/bin/picard-tools/picard.jar ${sing_opts[3]}" ;;
-        esac
-        tool_opts=`echo ${sing_opts[*]} | cut -d' ' -f5-`
-        ;;
-
-    abra)
-        tool_name="/usr/bin/abra.jar"
-        tool_opts=`echo ${sing_opts[*]} | cut -d' ' -f4-`
-        ;;
-
-    *)
-        tool_name="/usr/bin/${tool_name}.jar"
-        tool_opts=`echo ${sing_opts[*]} | cut -d' ' -f4-`
-        ;;
-
-esac
-
 sing=`echo ${sing_opts[*]} | cut -d' ' -f1-3`
 
-# echo "==> $sing ${java_opts[*]} ${tool_name} ${tool_opts}"
-$sing ${java_opts[*]} ${tool_name} ${tool_opts}
+# echo "==> $sing ${java_opts[*]} ${tool_opts}"
+$sing ${java_opts[*]} ${tool_opts}

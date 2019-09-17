@@ -17,6 +17,8 @@ fi
 pipeline_name_version=${ROSLIN_DEFAULT_PIPELINE_NAME_VERSION}
 debug_options=""
 restart_options=""
+mem_options=""
+cores_options=""
 restart_jobstore_id=""
 batch_system=""
 output_directory="./outputs"
@@ -39,6 +41,8 @@ OPTIONS:
    -j      Jobstore UUID
    -u      Job UUID
    -k      Toil work directory location
+   -m      Max Mem (e.g. 256G)
+   -c      Max Cores (e.g. 14)
    -r      Restart the workflow with the given job store UUID
    -t      Run pipeline in test mode
    -z      Show list of supported workflows
@@ -52,7 +56,7 @@ EXAMPLE:
 EOF
 }
 
-while getopts “v:w:i:b:o:j:k:rtzd:u:” OPTION
+while getopts “v:w:i:b:o:j:k:m:c:rtzd:u:” OPTION
 do
     case $OPTION in
         v) pipeline_name_version=$OPTARG ;;
@@ -62,9 +66,11 @@ do
         o) output_directory=$OPTARG ;;
         j) JOBSTORE_ID=$OPTARG ;;
         k) work_dir=$OPTARG ;;
+        m) max_mem=$OPTARG ;;
+        c) max_cores=$OPTARG ;;
         r) restart_options="--restart" ;;
         t) test_mode="True" ;;
-        z) cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl
+        z) cd ${ROSLIN_PIPELINE_CWL_PATH}
            find . -name "*.cwl" -exec bash -c "echo {} | cut -c 3- | sort" \;
            exit 0
            ;;
@@ -87,6 +93,7 @@ then
     exit 1
 fi
 
+pipeline_cwl_path=${ROSLIN_PIPELINE_CWL_PATH}
 # load pipeline settings
 source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/settings.sh
 
@@ -95,6 +102,16 @@ then
     echo "Running in test mode"
     source ${ROSLIN_CORE_CONFIG_PATH}/${pipeline_name_version}/test-settings.sh
 
+fi
+
+if [ ! -z $max_mem ]
+then
+  mem_options="--maxMemory $max_mem"
+fi
+
+if [ ! -z $max_cores ]
+then
+  cores_options="--maxCores $max_cores"
 fi
 
 if [ -z "$ROSLIN_PIPELINE_BIN_PATH" ] || [ -z "$ROSLIN_PIPELINE_DATA_PATH" ] || \
@@ -113,21 +130,6 @@ then
     echo "ROSLIN_CMO_INSTALL_PATH=${ROSLIN_CMO_INSTALL_PATH}"
     echo "ROSLIN_TOIL_INSTALL_PATH=${ROSLIN_TOIL_INSTALL_PATH}"
     exit 1
-fi
-
-# check Singularity existstence only if you're not on leader nodes
-# fixme: this is so MSKCC-specific
-leader_node=(luna selene)
-case "${leader_node[@]}" in  *"`hostname -s`"*) leader_node='yes' ;; esac
-
-if [ "$leader_node" != 'yes' ]
-then
-    if [ ! -x "`command -v $ROSLIN_SINGULARITY_PATH`" ]
-    then
-        echo "Unable to find Singularity."
-        echo "ROSLIN_SINGULARITY_PATH=${ROSLIN_SINGULARITY_PATH}"
-        exit 1
-    fi
 fi
 
 if [ ! -d $ROSLIN_CMO_PYTHON_PATH ]
@@ -153,14 +155,6 @@ batch_sys_options="--batchSystem ${batch_system}"
 
 # get absolute path for output directory
 output_directory=`python -c "import os;print(os.path.abspath('${output_directory}'))"`
-
-# check if output directory already exists
-if [ -d ${output_directory} ]
-then
-    echo "The specified output directory already exists: ${output_directory}"
-    echo "Aborted."
-    exit 1
-fi
 
 # create output directory
 mkdir -p ${output_directory}
@@ -193,7 +187,7 @@ else
 fi
 
 # LSF+TOIL
-export TOIL_LSF_PROJECT="${job_uuid}"
+export TOIL_LSF_ARGS="${TOIL_LSF_ARGS} -P ${job_uuid}"
 job_store_uuid=${JOBSTORE_ID}
 
 # save job uuid
@@ -215,30 +209,32 @@ echo "VERSIONS: roslin-core-${ROSLIN_CORE_VERSION}, roslin-${ROSLIN_PIPELINE_NAM
 # add virtualenv and sing to PATH
 export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERSION/virtualenv/bin/:${ROSLIN_CORE_BIN_PATH}/sing:$PATH
 
+export TMP="${work_dir}"
+export TMPDIR="${work_dir}"
+export SINGULARITY_CACHEDIR="${ROSLIN_PIPELINE_BIN_PATH}/img"
 # run cwltoil
 set -o pipefail
 cwltoil \
     ${restart_options} \
     --jobStore file://${jobstore_path} \
     --retryCount 1 \
-    --defaultDisk 24G \
-    --defaultMemory 48G \
-    --defaultCores 1 \
-    --maxDisk 128G \
-    --maxMemory 256G \
-    --maxCores 14 \
-    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH ROSLIN_BIND_PATH ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR \
-    --no-container \
+    ${mem_options} \
+    ${cores_options} \
+    --preserve-environment PATH PYTHONPATH ROSLIN_PIPELINE_DATA_PATH ROSLIN_PIPELINE_BIN_PATH ROSLIN_EXTRA_BIND_PATH SINGULARITY_BIND ROSLIN_PIPELINE_WORKSPACE_PATH ROSLIN_PIPELINE_OUTPUT_PATH ROSLIN_SINGULARITY_PATH CMO_RESOURCE_CONFIG ROSLIN_MONGO_HOST ROSLIN_MONGO_PORT ROSLIN_MONGO_DATABASE ROSLIN_MONGO_USERNAME ROSLIN_MONGO_PASSWORD TMP TMPDIR ROSLIN_USE_DOCKER DOCKER_REGISTRY_NAME DOCKER_BIND ROSLIN_PIPELINE_CWL_PATH \
+    --singularity \
     --not-strict \
     --disableCaching \
-    --cleanWorkDir never \
+    --disableChaining \
     --realTimeLogging \
+    --stats \
     --maxLogFileSize 0 \
-    --writeLogs ${output_directory}/log \
+    --writeLogsGzip ${output_directory}/log \
     --logFile ${output_directory}/log/cwltoil.log \
+    --tmpdir-prefix ${work_dir} \
+    --tmp-outdir-prefix ${work_dir} \
     --workDir ${work_dir} \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
-    ${ROSLIN_PIPELINE_BIN_PATH}/cwl/${workflow_filename} \
+    ${pipeline_cwl_path}/${workflow_filename} \
     ${input_filename} \
     | tee ${output_directory}/output-meta.json
 exit_code=$?

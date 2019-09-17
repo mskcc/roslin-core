@@ -3,7 +3,7 @@
 export ROSLIN_CORE_VERSION="{{ core_version }}"
 
 # path to all the Roslin Core versions are/will be installed
-export ROSLIN_CORE_ROOT="{{ roslin_root }}/roslin-core"
+export ROSLIN_CORE_ROOT="{{ roslin_core_root }}"
 
 # path for a specific version of Roslin Core
 export ROSLIN_CORE_PATH="${ROSLIN_CORE_ROOT}/${ROSLIN_CORE_VERSION}"
@@ -20,5 +20,7 @@ export ROSLIN_MONGO_USERNAME="{{ core_mongo_username }}"
 export ROSLIN_MONGO_PASSWORD="{{ core_mongo_password }}"
 
 export PATH=$ROSLIN_CORE_BIN_PATH:$PATH
+export PATH=$ROSLIN_CORE_BIN_PATH/install:$PATH
+export PATH=$ROSLIN_CORE_BIN_PATH/sing:$PATH
 
 echo "Loaded Roslin Core Version ( $ROSLIN_CORE_VERSION )"

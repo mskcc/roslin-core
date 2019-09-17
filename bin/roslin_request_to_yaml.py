@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-
 import sys
 import os
 import re
 import argparse
-import yaml
 import copy
 import csv
 import glob
@@ -23,6 +21,9 @@ def read_pipeline_settings(pipeline_name_version):
         (key, _, value) = line.partition("=")
         source_env[key] = value.rstrip()
     proc.communicate()
+    roslin_pipeline_resource_path = source_env['ROSLIN_PIPELINE_RESOURCE_PATH']
+    roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
+    execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
     return source_env
 
 def run_command(params, pipeline_settings):
@@ -33,10 +34,11 @@ def run_command(params, pipeline_settings):
     command_args = []
     for single_arg_key in params_dict:
         single_arg = '--'+ single_arg_key
-	single_arg = single_arg.replace('_','-')
+        single_arg = single_arg.replace('_','-')
         single_arg_value = params_dict[single_arg_key]
-        command_args.append(single_arg)
-        command_args.append(single_arg_value)
+	if single_arg_value:
+	    command_args.append(single_arg)
+	    command_args.append(single_arg_value)
     command = ['python',pipeline_script] + command_args
     proc = subprocess.Popen(command, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     (script_stdout,script_stderr) = proc.communicate();
@@ -51,9 +53,9 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pairing", help="the pairing file", required=True)
     parser.add_argument("-g", "--grouping", help="the grouping file", required=True)
     parser.add_argument("-r", "--request", help="the request file", required=True)
-    parser.add_argument("-o", "--output-directory", help="output_directory for pipeline (NOT CONFIG FILE)", required=True)
     parser.add_argument("-f", "--yaml-output-file", help="file to write yaml to", required=True)
-    parser.add_argument("--pipeline",action="store",dest="pipeline_name_version",help="Pipeline name/version (e.g. variant/1.0.0)",required=True)
+    parser.add_argument("--pipeline",action="store",dest="pipeline_name_version",help="Pipeline name/version (e.g. variant/2.5.0)",required=True)
+    parser.add_argument("--clinical", help="the clinical data file", required=False)
     params = parser.parse_args()
     # read the Roslin Pipeline settings
     pipeline_settings = read_pipeline_settings(params.pipeline_name_version)
