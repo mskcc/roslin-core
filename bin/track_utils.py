@@ -1558,7 +1558,7 @@ class RoslinTrack():
         logger = self.logger
         stats_file_list = self.job_store_obj.getStatsFiles()
         for single_stats_path in stats_file_list:
-            if os.path.exists(single_stats_path):
+            try:
                 with open(single_stats_path, 'rb') as single_file:
                     single_stats_data = json.load(single_file)
                     if 'jobs' in single_stats_data:
@@ -1575,6 +1575,8 @@ class RoslinTrack():
                                             if single_worker_obj["job_stream"].split("/")[2] == single_job_stream_path.split("/")[2]:
                                                 single_worker_obj["job_memory"] = single_job['memory']
                                                 single_worker_obj["job_cpu"] = single_job['clock']
+            except IOError:
+                continue
 
     def check_jobs(self,track_job_flag):
         logger = self.logger
