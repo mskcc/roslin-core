@@ -212,6 +212,9 @@ export PATH=$ROSLIN_CORE_CONFIG_PATH/$ROSLIN_PIPELINE_NAME/$ROSLIN_PIPELINE_VERS
 export TMP="${work_dir}"
 export TMPDIR="${work_dir}"
 export SINGULARITY_CACHEDIR="${ROSLIN_PIPELINE_BIN_PATH}/img"
+# Unset bind paths to ensure portability
+unset SINGULARITY_BIND
+unset DOCKER_BIND
 # run cwltoil
 set -o pipefail
 cwltoil \
