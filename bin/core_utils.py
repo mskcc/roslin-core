@@ -378,7 +378,7 @@ def load_yaml(yaml_path):
     import yaml
     yaml_data = None
     with open(yaml_path,'r') as yaml_file:
-        yaml_data = yaml.load(yaml_file)
+        yaml_data = yaml.safe_load(yaml_file)
     return yaml_data
 
 def save_yaml(yaml_path,yaml_data):
