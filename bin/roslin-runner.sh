@@ -229,6 +229,7 @@ cwltoil \
     --disableCaching \
     --disableChaining \
     --realTimeLogging \
+    --maxLocalJobs 2000 \
     --stats \
     --maxLogFileSize 0 \
     --writeLogsGzip ${output_directory}/log \
