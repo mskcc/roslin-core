@@ -1,7 +1,7 @@
 version: 2.1.2
-root: /ifs/work/pi/roslin-core
+root: /vagrant/roslin-core
 mongo:
-  host: "pitchfork.mskcc.org"
+  host: localhost
   port: 27017
   database: "pi_workflows"
   username:
