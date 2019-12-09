@@ -122,6 +122,9 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     max_cpu = submission_requirements_dict['max_cpu']
     max_mem = submission_requirements_dict['max_mem']
     foreground_mode = submission_requirements_dict['foreground_mode']
+    # Update TMP env variables
+    os.environ['TMPDIR'] = roslin_work_path
+    os.environ['TMP'] = roslin_work_path    
     if results_dir:
         workflow_results_folder = os.path.join(project_id,job_uuid)
         workflow_results_path = os.path.join(results_dir,workflow_results_folder)
