@@ -10,21 +10,7 @@ import uuid
 import json
 import subprocess
 from collections import defaultdict
-
-def read_pipeline_settings(pipeline_name_version):
-    "read the Roslin Pipeline settings"
-    settings_path = os.path.join(os.environ.get("ROSLIN_CORE_CONFIG_PATH"), pipeline_name_version, "settings.sh")
-    command = ['bash', '-c', 'source {} && env'.format(settings_path)]
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
-    source_env = {}
-    for line in proc.stdout:
-        (key, _, value) = line.partition("=")
-        source_env[key] = value.rstrip()
-    proc.communicate()
-    roslin_pipeline_resource_path = source_env['ROSLIN_PIPELINE_RESOURCE_PATH']
-    roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
-    execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
-    return source_env
+from core_utils import load_pipeline_settings
 
 def run_command(params, pipeline_settings):
     script_name = 'roslin_request_to_yaml.py'

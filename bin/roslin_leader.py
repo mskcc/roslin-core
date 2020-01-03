@@ -18,7 +18,6 @@ import copy
 import argparse
 import shutil
 from functools import partial
-from ruamel.yaml import safe_load
 
 status_name_position = get_status_names()
 pending_status = status_name_position['pending']

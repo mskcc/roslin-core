@@ -51,7 +51,7 @@ def publish_mercurial_update_request_to_redis(project_name):
     redis_client.publish('roslin-mercurial-update', json.dumps(data))
 
 def run_command(params,pipeline_script_path,output_directory,project_name):
-    script_name = 'roslin_analysis_helper.py'    
+    script_name = 'roslin_analysis_helper.py'
     pipeline_script = os.path.join(pipeline_script_path,script_name)
     params_dict = params
     command_args = []
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     analysis_helper_args['facets_directory'] = os.path.join(output_directory,'facets')
     analysis_helper_args['script_path'] = params.pipeline_bin_path
     analysis_helper_args['disable_portal_repo_update'] = params.disable_portal_repo_update
-   
+
     exit_code = run_command(analysis_helper_args,params.pipeline_bin_path,output_directory,project_name)
 
     if not disable_jira_update:

@@ -203,6 +203,7 @@ def add_file_handler(logger,file_path,file_format,logging_level):
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
+
 def log(logger,log_level,message):
     current_time = get_current_time()
     if not logger:
