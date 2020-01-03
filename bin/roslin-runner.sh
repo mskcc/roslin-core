@@ -237,11 +237,12 @@ cwltoil \
     --tmpdir-prefix ${work_dir} \
     --tmp-outdir-prefix ${work_dir} \
     --workDir ${work_dir} \
+    --disable-user-provenance \
+    --disable-host-provenance \
     --outdir ${output_directory} ${batch_sys_options} ${debug_options} \
     ${pipeline_cwl_path}/${workflow_filename} \
     ${input_filename} \
     | tee ${output_directory}/output-meta.json
-exit_code=$?
 
 # revert CMO_RESOURCE_CONFIG
 unset CMO_RESOURCE_CONFIG
