@@ -44,5 +44,8 @@ if __name__ == "__main__":
     parser.add_argument("--clinical", help="the clinical data file", required=False)
     params = parser.parse_args()
     # read the Roslin Pipeline settings
-    pipeline_settings = read_pipeline_settings(params.pipeline_name_version)
+    pipeline_name_version_split = params.pipeline_name_version.split("/")
+    pipeline_name = pipeline_name_version_split[0]
+    pipeline_version = pipeline_name_version_split[1]
+    pipeline_settings = load_pipeline_settings(pipeline_name,pipeline_version)
     run_command(params,pipeline_settings)
