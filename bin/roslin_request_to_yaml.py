@@ -25,7 +25,7 @@ def run_command(params, pipeline_settings):
         if single_arg_value:
             command_args.append(single_arg)
             command_args.append(single_arg_value)
-    command = ['python',pipeline_script] + command_args
+    command = [pipeline_script] + command_args
     proc = subprocess.Popen(command, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     (script_stdout,script_stderr) = proc.communicate();
     if script_stdout:
