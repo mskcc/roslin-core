@@ -151,7 +151,9 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
     log_stdout = "leader-stdout.log"
     log_stderr = "leader-stderr.log"
     input_meta_data = None
-    roslin_leader_command = ["roslin_leader.py",
+    venv_python = os.path.join(pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH'],"virtualenv","bin","python3")
+    roslin_leader_script = os.path.join(pipeline_settings['ROSLIN_CORE_BIN_PATH'],"roslin_leader.py")
+    roslin_leader_command = [venv_python,roslin_leader_script,
     leader_args_dict['pipeline_name'],pipeline_name,
     leader_args_dict['pipeline_version'],pipeline_version,
     leader_args_dict['jobstore_uuid'],jobstore_uuid,
