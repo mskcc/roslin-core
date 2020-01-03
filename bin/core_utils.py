@@ -1,11 +1,8 @@
-from __future__ import print_function
+#!/usr/bin/env python3
 from subprocess import PIPE, Popen, STDOUT
 import os, sys, argparse
 from multiprocessing.dummy import Pool
-try:
-    from queue import Queue
-except ImportError:
-    from Queue import Queue
+from queue import Queue
 import time
 import shutil
 import filecmp
@@ -45,9 +42,8 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
             subprocess_stdout = None
             subprocess_stderr = None
             if single_process.stdout:
-                subprocess_stdout = iter(single_process.stdout.readline, "")
-                for single_line in subprocess_stdout:
-                    single_output_line = single_line.rstrip()
+                for single_line in single_process.stdout:
+                    single_output_line = single_line.rstrip().decode()
                     if single_output_line:
                         ignore_line = False
                         for single_ignore_line in ignore_lines:
@@ -499,7 +495,7 @@ def create_mpgr(pipeline_name,pipeline_version,workflow,batch_system,mpgr_output
                 test_cwl_batchsystem=cwl_batch_system,
                 test_run_args=run_args)
             write_to_disk(template_output_path,template_data)
-            os.chmod(template_output_path,0777)
+            os.chmod(template_output_path,0o777)
         else:
             copy_ignore_same_file(single_template_path,template_output_path)
     roslin_workflow_class = getattr(roslin_workflows,workflow)
@@ -611,7 +607,7 @@ def merge(yaml1, yaml2):
         if 'class' in yaml1 and 'class' in yaml2:
             merge_elements = True
         else:
-            for k,v in yaml2.iteritems():
+            for k,v in yaml2.items():
                 if k not in merged_yaml:
                     merged_yaml[k] = v
                 else:
@@ -754,7 +750,7 @@ def read_settings(pipeline_name,pipeline_version,settings_file_name):
     source_env = {}
 
     for line in proc.stdout:
-        (key, _, value) = line.partition("=")
+        (key, _, value) = line.decode().partition("=")
         source_env[key] = value.rstrip()
 
     proc.communicate()
@@ -782,10 +778,11 @@ def load_pipeline_settings(pipeline_name, pipeline_version):
                 if '&&' in single_line and single_env in os.environ:
                     continue
                 pipeline_env_list.append(single_env)
-    if 'ROSLIN_PIPELINE_RESOURCE_PATH' in pipeline_settings:
-        roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
-        roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate_this.py")
-        execfile(roslin_virtualenv_path, dict(__file__=roslin_virtualenv_path))
+#    if 'ROSLIN_PIPELINE_RESOURCE_PATH' in pipeline_settings:
+#        roslin_pipeline_resource_path = pipeline_settings['ROSLIN_PIPELINE_RESOURCE_PATH']
+#        roslin_virtualenv_path = os.path.join(roslin_pipeline_resource_path,"virtualenv","bin","activate")
+#        with open(roslin_virtualenv_path, 'rb') as roslin_virtualenv:
+#            exec(compile(roslin_virtualenv.read(), roslin_virtualenv_path, 'exec'), dict(__file__=roslin_virtualenv_path))
     for single_env in pipeline_env_list:
         if single_env in pipeline_settings:
             os.environ[single_env] = pipeline_settings[single_env]

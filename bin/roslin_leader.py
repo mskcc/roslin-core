@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 import logging
 from toil.common import Toil, safeUnpickleFromStream
 from track_utils import log, ReadOnlyFileJobStore, RoslinTrack, get_current_time, add_stream_handler, add_file_handler, log, get_status_names, update_run_results_status, update_workflow_run_results, add_user_event, update_workflow_params
@@ -143,10 +142,8 @@ def add_version_str(workflow_params):
 def log_workflow_output(logger,roslin_workflow,job_uuid):
     output_meta_path = roslin_workflow.params["output_meta_json"]
     output_data = load_yaml(output_meta_path)
-    workflow_params = copy.deepcopy(roslin_workflow.params)
+    workflow_params = copy.deepcopy(roslin_workflow.get_pickle_safe_params())
     workflow_params['outputs'] = output_data
-    del workflow_params['requirement_list']
-    del workflow_params['logger']
     update_workflow_params(logger,job_uuid,workflow_params)
 
 def workflow_transition(logger,roslin_workflow,job_uuid,status):
@@ -163,7 +160,7 @@ def workflow_transition(logger,roslin_workflow,job_uuid,status):
         roslin_workflow.on_success(logger)
         roslin_workflow.on_complete(logger)
         log(logger,'info',"Cleaning up tmp files")
-        cleanup_tmp_files(roslin_workflow.params)
+        cleanup_tmp_files(roslin_workflow.get_pickle_safe_params())
         log_workflow_output(logger,roslin_workflow,job_uuid)
         log(logger,'info',finished_log_message)
     if status == exit_status:
@@ -181,7 +178,7 @@ def roslin_track(logger,toil_obj,track_leader,job_store_path,job_uuid,clean_up_d
             log_message = log_message + " ( restarted )"
         return log_message
 
-    workflow_params = roslin_workflow.params
+    workflow_params = roslin_workflow.get_pickle_safe_params()
     project_id = workflow_params['project_id']
     pipeline_name = workflow_params['pipeline_name']
     pipeline_version = workflow_params['pipeline_version']
@@ -328,9 +325,7 @@ if __name__ == "__main__":
         signal.signal(signal.SIGTERM, partial(cleanup, clean_up_dict))
         roslin_track = Thread(target=roslin_track, args=([logger, toil_obj, track_leader, job_store, options.project_uuid, clean_up_dict, roslin_workflow, project_workdir, project_tmpdir]))
         roslin_job = roslin_workflow.run_pipeline()
-        roslin_workflow_params = copy.deepcopy(roslin_workflow.params)
-        del roslin_workflow_params['requirement_list']
-        del roslin_workflow_params['logger']
+        roslin_workflow_params = copy.deepcopy(roslin_workflow.get_pickle_safe_params())
         with open(workflow_params_path,"w") as workflow_params_file:
             json.dump(roslin_workflow_params,workflow_params_file, default=lambda x: None)
         update_workflow_params(logger,options.project_uuid,roslin_workflow_params)

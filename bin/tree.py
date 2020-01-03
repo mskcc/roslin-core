@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # tree.py
@@ -48,7 +48,7 @@ def tree(dir, padding, print_files=False, isLast=False, isFirst=False):
                 print padding + '├── ' + file
 
 def usage():
-    return '''Usage: %s [-f] 
+    return '''Usage: %s [-f]
 Print tree structure of path specified.
 Options:
 -f      Print files as well as directories

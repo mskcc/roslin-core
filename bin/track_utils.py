@@ -1,4 +1,4 @@
-from __future__ import print_function
+#!/usr/bin/env python3
 import os
 import shutil
 import logging
@@ -135,7 +135,7 @@ def make_mongo_safe_list(logger,list_obj):
         elif isinstance(single_item, list):
             safe_list_elem = make_mongo_safe_list(logger,single_item)
         else:
-            if isinstance(single_item, (str, unicode, float, int, bool)):
+            if isinstance(single_item, (str, bytes, float, int, bool)):
                 safe_list_elem = single_item
         mongo_safe_list.append(safe_list_elem)
     return mongo_safe_list
@@ -161,7 +161,7 @@ def make_mongo_safe_dict(logger,dict_obj):
         elif isinstance(dict_value, list):
             updated_dict[current_key] = make_mongo_safe_list(logger,dict_value)
         else:
-            if isinstance(dict_value, (str, unicode, float, int, bool)):
+            if isinstance(dict_value, (str, bytes, float, int, bool)):
                 updated_dict[current_key] = dict_value
             else:
                 updated_dict[current_key] = None
@@ -674,7 +674,7 @@ class RoslinJob(Job):
         sys.path.append(pipeline_settings['ROSLIN_PIPELINE_BIN_PATH'])
         job_function = dill.loads(self.compressed_job_function)
         job_name = self.job_params['name']
-        logger = dill.loads(self.params['logger'])
+        logger, _ = get_logger(self.params)
         try:
             return_code = job_function(self.params,self.job_params)
             if return_code!=0 and return_code!=None:
@@ -724,6 +724,26 @@ def find_unique_name_in_dict(root_name,dict_obj):
             unique_key = new_key
     return new_key
 
+def get_logger(params):
+    params = params
+    workflow_name = params['workflow_name']
+    log_folder = params['log_folder']
+    if params['debug_mode']:
+        logging_level = logging.DEBUG
+    else:
+        logging_level = logging.INFO
+    logger = logging.getLogger(workflow_name)
+    if 'log_file' not in params:
+        log_file = workflow_name +".log"
+        log_path = os.path.join(log_folder,log_file)
+    else:
+        log_path = params['log_file']
+    logger.setLevel(logging_level)
+    if logger.hasHandlers():
+        logger.handlers = []
+    add_file_handler(logger,log_path,None,logging_level)
+    return (logger,log_path)
+
 class RoslinWorkflow(object):
     def __init__(self,params):
         if not params:
@@ -732,25 +752,24 @@ class RoslinWorkflow(object):
         else:
             output_dir = params['output_dir']
             params['output_meta_json'] = os.path.join(output_dir,'output-meta.json')
-            workflow_name = params['workflow_name']
-            log_folder = params['log_folder']
             if 'configure' not in params:
                 params['configure'] = {}
-            if 'logger' not in params:
-                if params['debug_mode']:
-                    logging_level = logging.DEBUG
-                else:
-                    logging_level = logging.INFO
-                logger = logging.getLogger(workflow_name)
-                log_file = workflow_name +".log"
-                log_path = os.path.join(log_folder,log_file)
-                logger.setLevel(logging_level)
-                add_file_handler(logger,log_path,None,logging_level)
-                params['logger'] = dill.dumps(logger)
-                params['log_file'] = log_path
             self.jobs = {}
             self.params = params
+            if 'log_file' not in params:
+                _, log_file = get_logger(self.params)
+                self.params['log_file'] = log_file
             self.configure()
+
+
+    def get_pickle_safe_params(self):
+        keys_to_ignore = ['requirement_list']
+        pickle_safe_params = {}
+        for single_key in self.params:
+            if single_key not in keys_to_ignore:
+                pickle_safe_params[single_key] = self.params[single_key]
+        return pickle_safe_params
+
 
     def configure(self):
         params = self.params
@@ -787,7 +806,7 @@ class RoslinWorkflow(object):
         params = self.params
         results_path = params['results_dir']
         if results_path:
-            logger = dill.loads(params['logger'])
+            logger, _ = get_logger(params)
             num_groups = int(params['num_groups'])
             num_pairs = int(params['num_pairs'])
             restart = params['restart']
@@ -968,7 +987,7 @@ class RoslinWorkflow(object):
         pass
 
     def run_cwl(self,params,job_params):
-        logger = dill.loads(params['logger'])
+        logger, _ = get_logger(params)
         project_id = params['project_id']
         job_uuid = params['job_uuid']
         pipeline_name_version = params['pipeline_name'] + "/" + params['pipeline_version']
@@ -1043,7 +1062,6 @@ class RoslinWorkflow(object):
 
     def run_process_helper(self,command,shell,job_name):
         params = self.params
-        logger = dill.loads(params['logger'])
         log_folder = params['log_folder']
         if not os.path.exists(log_folder):
             os.mkdir(log_folder)
@@ -1275,7 +1293,7 @@ class SingleCWLWorkflow(RoslinWorkflow):
 
     def input_sample_or_pair(self,key_list,job_params,roslin_yaml):
         params = self.params
-        logger = dill.loads(params['logger'])
+        logger, _ = get_logger(params)
         dependency_input = None
         dependency_key_list = []
         error_description = ""

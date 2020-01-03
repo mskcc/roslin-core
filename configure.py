@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os, sys
-import ruamel.yaml
 from jinja2 import Template
+import yaml
 
 
 def read_from_disk(filename):
@@ -18,7 +18,7 @@ def write_to_disk(filename, content):
     with open(filename, 'w') as file_out:
         file_out.write(content)
 
-    print "Modified: {}".format(filename)
+    print("Modified: {}".format(filename))
 
 
 def get_template(filename):
@@ -50,13 +50,10 @@ def main():
     "main function"
 
     if len(sys.argv) < 2:
-	print "USAGE: config.py configuration_file.yaml\nconfig.py configuration_file.yaml"
-	exit()
+        print("USAGE: config.py configuration_file.yaml\nconfig.py configuration_file.yaml")
+        exit()
 
-    settings = ruamel.yaml.load(
-        read_from_disk(sys.argv[1]),
-        ruamel.yaml.RoundTripLoader
-    )
+    settings = yaml.safe_load(read_from_disk(sys.argv[1]))
 
     settings['ROSLIN_CORE_ROOT'] = os.environ['ROSLIN_ROOT']
 

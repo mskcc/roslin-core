@@ -1,9 +1,9 @@
 #!/bin/bash
 script_rel_dir=`dirname ${BASH_SOURCE[0]}`
-script_dir=`python -c "import os; print os.path.abspath('${script_rel_dir}')"`
-BIN_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.dirname('${script_dir}'))"`
-CONFIG_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'config'))"`
-SCHEMA_DIRECTORY=`python -c "import os; print os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'schemas'))"`
+script_dir=`python3 -c "import os; print(os.path.abspath('${script_rel_dir}'))"`
+BIN_DIRECTORY=`python3 -c "import os; print(os.path.abspath(os.path.dirname('${script_dir}')))"`
+CONFIG_DIRECTORY=`python3 -c "import os; print(os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'config')))"`
+SCHEMA_DIRECTORY=`python3 -c "import os; print(os.path.abspath(os.path.join(os.path.dirname('${script_dir}'),os.path.pardir,'schemas')))"`
 # load settings
 source $CONFIG_DIRECTORY/settings.sh
 

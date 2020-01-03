@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import os
 import json
@@ -9,7 +9,7 @@ import logging
 from subprocess import Popen, PIPE, call
 import sys
 import os
-from Queue import Queue
+from queue import Queue
 import traceback
 import ast
 import tempfile

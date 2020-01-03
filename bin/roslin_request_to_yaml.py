@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import os
 import re
@@ -36,16 +36,16 @@ def run_command(params, pipeline_settings):
         single_arg = '--'+ single_arg_key
         single_arg = single_arg.replace('_','-')
         single_arg_value = params_dict[single_arg_key]
-	if single_arg_value:
-	    command_args.append(single_arg)
-	    command_args.append(single_arg_value)
+        if single_arg_value:
+            command_args.append(single_arg)
+            command_args.append(single_arg_value)
     command = ['python',pipeline_script] + command_args
     proc = subprocess.Popen(command, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     (script_stdout,script_stderr) = proc.communicate();
     if script_stdout:
-        print script_stdout
+        print(script_stdout.decode())
     if script_stderr:
-        print script_stderr
+        print(script_stderr.decode())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="convert current project files to yaml input")
