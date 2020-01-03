@@ -743,7 +743,7 @@ def read_settings(pipeline_name,pipeline_version,settings_file_name):
     if not os.path.exists(settings_path):
         return None
 
-    command = 'source {} && env'.format(settings_path)
+    command = '. {} && env'.format(settings_path)
 
     proc = Popen(command, stdout=PIPE,shell=True)
 
