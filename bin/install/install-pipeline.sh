@@ -133,7 +133,6 @@ cp -R ${install_temp_path}/setup/cwl/* ${ROSLIN_PIPELINE_BIN_PATH}/cwl/
 # copy pipeline scripts
 cp ${install_temp_path}/setup/bin/roslin_workflows.py ${ROSLIN_PIPELINE_BIN_PATH}
 rsync -ap --exclude=roslin_workflows.py ${install_temp_path}/setup/bin/* ${ROSLIN_PIPELINE_BIN_PATH}/scripts/
-rm ${install_temp_path}/setup/bin/roslin_workflows.py
 
 # check md5 checksum
 cd ${ROSLIN_PIPELINE_BIN_PATH}/cwl

@@ -214,7 +214,7 @@ export TMPDIR="${work_dir}"
 export SINGULARITY_CACHEDIR="${ROSLIN_PIPELINE_BIN_PATH}/img"
 
 # run cwltoil
-unset SHEL
+export SHELL=/bin/sh
 set -o pipefail
 cwltoil \
     ${restart_options} \
