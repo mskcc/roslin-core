@@ -242,6 +242,7 @@ cwltoil \
     ${pipeline_cwl_path}/${workflow_filename} \
     ${input_filename} \
     | tee ${output_directory}/output-meta.json
+exit_code=$?
 
 # revert CMO_RESOURCE_CONFIG
 unset CMO_RESOURCE_CONFIG
