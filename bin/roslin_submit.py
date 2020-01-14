@@ -246,9 +246,11 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
         if error != None:
             print_error(error)
         with open(log_path_stdout,"w") as log_stdout:
-            log_stdout.write(output)
+            if output != None:
+                log_stdout.write(output)
         with open(log_path_stderr,"w") as log_stderr:
-            log_stderr.write(error)
+            if error != None:
+                log_stderr.write(error)
         exit(exit_code)
     else:
         leader_process = run_command(roslin_leader_command,log_path_stdout,log_path_stderr,False,False)

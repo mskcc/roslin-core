@@ -58,6 +58,8 @@ def run_popen(command,log_stdout,log_stderr,shell,wait,real_time):
                                 try:
                                     os.kill(process_pid,signal.SIGTERM)
                                 except:
+                                    error = traceback.format_exc()
+                                    print(error)
                                     pass
                             single_process.stdout.close()
                             errorcode = single_process.wait()
