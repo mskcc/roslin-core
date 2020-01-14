@@ -3,6 +3,7 @@ import os, sys
 import logging
 import argparse
 import json
+import signal
 from roslin_submit import  JOBSTORE_UUID_FILE_NAME, INPUT_YAML_FILE_NAME, WORKFLOW_PARAMS_FILE_NAME, submit, get_pipeline_name_and_versions, get_input_metadata, targzip_project_files
 
 if 'ROSLIN_CORE_BIN_PATH' not in os.environ:
@@ -13,6 +14,17 @@ sys.path.append(ROSLIN_CORE_BIN_PATH)
 from core_utils import load_pipeline_settings, copy_ignore_same_file, convert_yaml_abs_path, run_command, run_command_realtime, print_error, send_user_kill_signal, check_if_argument_file_exists, check_yaml_boolean_value, load_yaml, save_yaml, check_tmp_env, get_common_args, parse_workflow_args, get_submission_args, add_specific_args, get_leader_args, get_args_dict, get_restart_args
 
 logger = logging.getLogger("roslin_restart")
+
+def cleanup(clean_up_tuple, signal_num, frame):
+    signal_name = "Unknown"
+    if signal_num == signal.SIGINT:
+        signal_name = "SIGINT"
+    if signal_num == signal.SIGTERM:
+        signal_name = "SIGTERM"
+    signal_message = "Received signal: "+ signal_name
+    print(signal_message)
+    send_user_kill_signal(*clean_up_tuple)
+
 
 def main():
     "main function"
@@ -138,7 +150,7 @@ def main():
     workflow_params_data.update(workflow_params_data['requirements'])
     workflow_params_data['inputs_yaml'] = input_yaml_path
 
-    submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, work_dir, inputs_yaml, pipeline_settings, input_files_blob, workflow_params_data, workflow_params_data, requirements_list)
+    submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, work_dir, inputs_yaml, pipeline_settings, input_files_blob, workflow_params_data, workflow_params_data, requirements_list,cleanup)
 
 if __name__ == "__main__":
 

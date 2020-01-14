@@ -92,7 +92,7 @@ def handle_change_max_memory(work_dir,max_memory_str,max_cpu_str,input_yaml_path
     os.environ['ROSLIN_PIPELINE_CWL_PATH'] = new_cwl_directory
 
 
-def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, work_dir, inputs_yaml, pipeline_settings, input_files_blob, requirements_dict,submission_requirements_dict,workflow_args):
+def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, work_dir, inputs_yaml, pipeline_settings, input_files_blob, requirements_dict,submission_requirements_dict,workflow_args,cleanup_function):
     from track_utils import  construct_project_doc, submission_file_name, get_current_time, add_user_event, update_run_result_doc, update_project_doc, construct_run_results_doc, update_latest_project, find_unique_name_in_dir, termination_file_name, old_jobs_folder, update_run_results_restart, update_run_profile_doc, construct_run_profile_doc
     leader_args = get_leader_args()
     common_args = get_common_args()
@@ -234,8 +234,8 @@ def submit(pipeline_name, pipeline_version,job_uuid, jobstore_uuid, restart, wor
         print(roslin_leader_command)
     if foreground_mode:
         clean_up_tuple = (project_id, job_uuid, pipeline_name, pipeline_version, True)
-        signal.signal(signal.SIGINT, partial(cleanup, clean_up_tuple))
-        signal.signal(signal.SIGTERM, partial(cleanup, clean_up_tuple))
+        signal.signal(signal.SIGINT, partial(cleanup_function, clean_up_tuple))
+        signal.signal(signal.SIGTERM, partial(cleanup_function, clean_up_tuple))
         if debug_mode:
             print("Project info:")
         print(running_command_str)
@@ -448,7 +448,7 @@ def main():
         handle_change_max_memory(work_dir,submission_requirements_dict['max_mem'],submission_requirements_dict['max_cpu'],inputs_yaml_work_dir,requirements_dict['debug_mode'])
 
     # submit
-    submit(pipeline_name, pipeline_version, job_uuid, jobstore_uuid, False, work_dir, inputs_yaml_work_dir, pipeline_settings, input_files_blob, requirements_dict, submission_requirements_dict,requirements_list)
+    submit(pipeline_name, pipeline_version, job_uuid, jobstore_uuid, False, work_dir, inputs_yaml_work_dir, pipeline_settings, input_files_blob, requirements_dict, submission_requirements_dict,requirements_list,cleanup)
 
 if __name__ == "__main__":
 
