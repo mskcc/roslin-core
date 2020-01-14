@@ -1010,7 +1010,7 @@ class RoslinWorkflow(object):
         job_store_name = job_jobstore
         job_store_path = os.path.join(job_tmp_dir,job_store_name)
         job_suffix = ''
-        job_store_job_return_value = os.path.join(job_store_path,'rootJobReturnValue')
+        job_store_job_return_value = os.path.join(*[job_store_path,'files','shared','rootJobReturnValue'])
         if os.path.exists(job_store_job_return_value):
             job_restart = True
         else:
