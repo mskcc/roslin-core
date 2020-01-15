@@ -111,7 +111,6 @@ def update_mongo_document(logger,collection_name,project_uuid,updated_document):
             except:
                 error_message = "Failed to update mongo document for project [ " + project_uuid + " ] to collection "+ collection_name + "\n" + str(mongo_safe_dict) + "\n" + traceback.format_exc()
                 log(logger,"error",error_message)
-                sys.exit(1)
 
 def make_mongo_key_safe(key):
     return key.replace("$","").replace(".","")
