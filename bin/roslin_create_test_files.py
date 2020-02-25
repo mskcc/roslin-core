@@ -42,7 +42,7 @@ def download_test_data(test_data_path,test_data_url,test_data_archive):
 	if not os.path.exists(test_data_archive):
 		logger.info("Downloading test data")
 		test_data_request = requests.get(test_data_url, stream=True)
-		with open(test_data_tar_path,'w') as test_data_tar:
+		with open(test_data_tar_path,'wb') as test_data_tar:
 			total_length = int(test_data_request.headers.get('content-length'))
 			for chunk in progress.bar(test_data_request.iter_content(chunk_size=1024), expected_size=(total_length/1024) + 1):
 			    if chunk:

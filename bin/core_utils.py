@@ -271,8 +271,8 @@ def kill_all_lsf_jobs(logger, uuid):
     lsf_kill_str = "bjobs -P "+ str(uuid) + " -o \"jobid delimiter=','\" -noheader"
     lsf_kill_command = shlex.split(lsf_kill_str)
     kill_process_dict = run_command(lsf_kill_command,None,None,False,True)
-    output = kill_process_dict['output']
-    error = kill_process_dict['error']
+    output = str(kill_process_dict['output'])
+    error = str(kill_process_dict['error'])
     if "No unfinished job found" not in error:
         if output:
             list_of_jobs_to_kill = output.split('\n')
